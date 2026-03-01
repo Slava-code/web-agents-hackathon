@@ -15,7 +15,7 @@ public class ConvexManager : MonoBehaviour
 {
     [Header("Convex Configuration")]
     [Tooltip("Your Convex deployment URL, e.g. https://your-project-123.convex.cloud")]
-    public string convexUrl = "https://YOUR_DEPLOYMENT.convex.cloud";
+    public string convexUrl = "https://impartial-whale-32.convex.site";
 
     [Tooltip("Room ID to poll state for")]
     public string roomId = "";
