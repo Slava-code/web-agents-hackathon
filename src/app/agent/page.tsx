@@ -197,15 +197,20 @@ export default function AgentPage() {
     abortRef.current = controller
 
     try {
+      const body = { baseUrl: learnBaseUrl.replace(/\/$/, ''), routes }
+      console.log('[Learn] POST /api/learn', body)
       const res = await fetch('/api/learn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ baseUrl: learnBaseUrl.replace(/\/$/, ''), routes }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       })
 
+      console.log('[Learn] Response:', res.status, res.statusText)
       if (!res.ok) {
-        setError(`Request failed: ${res.status}`)
+        const errorBody = await res.text().catch(() => '')
+        console.error('[Learn] Error body:', errorBody)
+        setError(`Request failed: ${res.status} — ${errorBody || res.statusText}`)
         setIsRunning(false)
         return
       }
@@ -236,15 +241,20 @@ export default function AgentPage() {
     abortRef.current = controller
 
     try {
+      const body = { siteId: selectedSiteId, route: selectedRoute }
+      console.log('[Scrape] POST /api/browser-use', body)
       const res = await fetch('/api/browser-use', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: selectedSiteId, route: selectedRoute }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       })
 
+      console.log('[Scrape] Response:', res.status, res.statusText)
       if (!res.ok) {
-        setError(`Request failed: ${res.status}`)
+        const errorBody = await res.text().catch(() => '')
+        console.error('[Scrape] Error body:', errorBody)
+        setError(`Request failed: ${res.status} — ${errorBody || res.statusText}`)
         setIsRunning(false)
         return
       }
@@ -274,15 +284,20 @@ export default function AgentPage() {
     abortRef.current = controller
 
     try {
+      const body = { siteId: selectedSiteId, route: selectedRoute }
+      console.log('[Monitor] POST /api/monitor', body)
       const res = await fetch('/api/monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siteId: selectedSiteId, route: selectedRoute }),
+        body: JSON.stringify(body),
         signal: controller.signal,
       })
 
+      console.log('[Monitor] Response:', res.status, res.statusText)
       if (!res.ok) {
-        setError(`Request failed: ${res.status}`)
+        const errorBody = await res.text().catch(() => '')
+        console.error('[Monitor] Error body:', errorBody)
+        setError(`Request failed: ${res.status} — ${errorBody || res.statusText}`)
         setIsRunning(false)
         return
       }
