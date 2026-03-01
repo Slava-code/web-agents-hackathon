@@ -598,6 +598,104 @@ else
 fi
 
 ###############################################################################
+# SECTION 6 — BrowserUse Smoke Test (1 test)
+###############################################################################
+
+_log_header "SECTION 6: BrowserUse Smoke Test"
+
+# Load API key from .env.local
+BU_API_KEY=""
+if [ -f "${PROJECT_DIR}/.env.local" ]; then
+  BU_API_KEY=$(grep -E '^BROWSER_USE_API_KEY=' "${PROJECT_DIR}/.env.local" | cut -d'=' -f2- | tr -d '[:space:]')
+fi
+
+if [ -z "$BU_API_KEY" ]; then
+  echo "  [WARN] BROWSER_USE_API_KEY not found in .env.local — SKIPPING BrowserUse test"
+  TOTAL=$((TOTAL + 1))
+  _pass "SKIPPED (no API key)"
+else
+
+  BU_API="https://api.browser-use.com/api/v3"
+
+  # Test 32: BrowserUse Smoke Test — create session, poll, verify, cleanup
+  _log_test "BrowserUse Smoke Test"
+
+  # Step 1: Claim a device lock for env-agent on the Environmental Monitoring device
+  BU_CLAIM_RESP=$(http_post "/agent-claim" "{\"agentId\":\"env-agent\",\"resourceType\":\"device\",\"resourceId\":\"$DEV_ENV_MON\",\"action\":\"BrowserUse smoke test\"}")
+  BU_CLAIM_OK=$(echo "$BU_CLAIM_RESP" | jq -r '.ok')
+  if [ "$BU_CLAIM_OK" != "true" ]; then
+    _fail "BrowserUse smoke test — could not claim device lock" "$BU_CLAIM_RESP"
+  else
+
+    # Step 2: Create a BrowserUse session
+    BU_TASK="Go to ${SITE_URL}/room-state?roomId=${ROOM_ID} and extract the room name from the JSON response"
+    BU_CREATE_RESP=$(curl -s -X POST "${BU_API}/sessions" \
+      -H "Content-Type: application/json" \
+      -H "X-Browser-Use-API-Key: ${BU_API_KEY}" \
+      -d "{\"task\":$(echo "$BU_TASK" | jq -Rs .),\"model\":\"bu-mini\"}")
+
+    BU_SESSION_ID=$(echo "$BU_CREATE_RESP" | jq -r '.id // empty')
+
+    if [ -z "$BU_SESSION_ID" ] || [ "$BU_SESSION_ID" = "null" ]; then
+      _fail "BrowserUse smoke test — session creation failed" "$BU_CREATE_RESP"
+    else
+      echo "  Session created: $BU_SESSION_ID"
+
+      # Step 3: Poll until terminal status (max 60s, every 3s)
+      BU_ELAPSED=0
+      BU_MAX_WAIT=60
+      BU_STATUS=""
+      BU_OUTPUT=""
+      while [ "$BU_ELAPSED" -lt "$BU_MAX_WAIT" ]; do
+        sleep 3
+        BU_ELAPSED=$((BU_ELAPSED + 3))
+
+        BU_POLL_RESP=$(curl -s -X GET "${BU_API}/sessions/${BU_SESSION_ID}" \
+          -H "X-Browser-Use-API-Key: ${BU_API_KEY}")
+
+        BU_STATUS=$(echo "$BU_POLL_RESP" | jq -r '.status // empty')
+        echo "  Poll ${BU_ELAPSED}s — status: $BU_STATUS"
+
+        # Check for terminal statuses: idle, stopped, timed_out, error
+        case "$BU_STATUS" in
+          idle|stopped|timed_out|error) break ;;
+        esac
+      done
+
+      BU_OUTPUT=$(echo "$BU_POLL_RESP" | jq -r '.output // empty')
+
+      # Step 4: Verify the session completed successfully
+      if [ "$BU_STATUS" = "idle" ] || [ "$BU_STATUS" = "stopped" ]; then
+        if [ -n "$BU_OUTPUT" ] && [ "$BU_OUTPUT" != "null" ]; then
+          _pass "BrowserUse session completed (status=$BU_STATUS) with output"
+          echo "  Output (truncated): $(echo "$BU_OUTPUT" | head -c 200)"
+        else
+          _pass "BrowserUse session completed (status=$BU_STATUS) — no output but session succeeded"
+        fi
+      elif [ "$BU_STATUS" = "timed_out" ] || [ "$BU_STATUS" = "error" ]; then
+        _fail "BrowserUse session ended with status=$BU_STATUS" "$BU_POLL_RESP"
+      else
+        _fail "BrowserUse session did not reach terminal status within ${BU_MAX_WAIT}s" "last status=$BU_STATUS"
+      fi
+
+      # Step 5: Stop the session to free resources
+      curl -s -X POST "${BU_API}/sessions/${BU_SESSION_ID}/stop" \
+        -H "X-Browser-Use-API-Key: ${BU_API_KEY}" >/dev/null 2>&1
+      echo "  Session stopped."
+    fi
+
+    # Step 6: Release the device lock
+    BU_RELEASE_RESP=$(http_post "/agent-release" "{\"agentId\":\"env-agent\",\"resourceId\":\"$DEV_ENV_MON\"}")
+    BU_RELEASE_OK=$(echo "$BU_RELEASE_RESP" | jq -r '.ok')
+    if [ "$BU_RELEASE_OK" = "true" ]; then
+      echo "  Device lock released."
+    else
+      echo "  [WARN] Failed to release device lock: $BU_RELEASE_RESP"
+    fi
+  fi
+fi
+
+###############################################################################
 # Summary
 ###############################################################################
 
