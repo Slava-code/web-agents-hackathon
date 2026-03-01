@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import TUGRobotDashboard from './page'
+import TUGDashboard from './page'
 
 jest.useFakeTimers()
 
-describe('TUG Robot Dashboard', () => {
+describe('TUG Fleet Dashboard', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     jest.clearAllTimers()
@@ -19,325 +19,173 @@ describe('TUG Robot Dashboard', () => {
 
   describe('Initial Render', () => {
     it('renders the dashboard header', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByText('Aethon TUG')).toBeInTheDocument()
-      expect(screen.getByText(/Autonomous Mobile Robot/)).toBeInTheDocument()
+      render(<TUGDashboard />)
+      expect(screen.getByText('TUG Fleet Monitor')).toBeInTheDocument()
+      expect(screen.getByText('OR → Sterilization Transport')).toBeInTheDocument()
     })
 
-    it('displays initial robot status as idle', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('robot-status')).toHaveTextContent('idle')
+    it('displays all 4 bots', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('bot-row-TUG-01')).toBeInTheDocument()
+      expect(screen.getByTestId('bot-row-TUG-02')).toBeInTheDocument()
+      expect(screen.getByTestId('bot-row-TUG-03')).toBeInTheDocument()
+      expect(screen.getByTestId('bot-row-TUG-04')).toBeInTheDocument()
     })
 
-    it('displays initial location as Pharmacy', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('current-location')).toHaveTextContent('Pharmacy')
-    })
-
-    it('displays initial battery level', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('battery-level')).toHaveTextContent('78')
-    })
-
-    it('displays initial speed as 0', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('speed')).toHaveTextContent('0.0 m/s')
-    })
-
-    it('displays initial load weight as 0', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('load-weight')).toHaveTextContent('0 kg')
+    it('displays active count', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('active-count')).toHaveTextContent('2 / 4')
     })
 
     it('displays trip count', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('trip-count')).toHaveTextContent('24')
-    })
-
-    it('displays total distance', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('total-distance')).toHaveTextContent('3.2')
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('trip-count')).toHaveTextContent('47')
     })
   })
 
-  describe('Connection Status', () => {
-    it('renders connection select', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('connection-select')).toBeInTheDocument()
+  describe('Bot Status Display', () => {
+    it('shows correct status for each bot', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('bot-status-TUG-01')).toHaveTextContent('IDLE')
+      expect(screen.getByTestId('bot-status-TUG-02')).toHaveTextContent('EN ROUTE')
+      expect(screen.getByTestId('bot-status-TUG-03')).toHaveTextContent('IDLE')
+      expect(screen.getByTestId('bot-status-TUG-04')).toHaveTextContent('RETURNING')
     })
 
-    it('allows changing connection status', () => {
-      render(<TUGRobotDashboard />)
-      const select = screen.getByTestId('connection-select')
-      fireEvent.change(select, { target: { value: 'weak' } })
-      expect(select).toHaveValue('weak')
+    it('shows source for each bot', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('bot-source-TUG-01')).toHaveTextContent('OR-1')
+      expect(screen.getByTestId('bot-source-TUG-02')).toHaveTextContent('OR-3')
+      expect(screen.getByTestId('bot-source-TUG-03')).toHaveTextContent('OR-2')
+      expect(screen.getByTestId('bot-source-TUG-04')).toHaveTextContent('OR-4')
     })
 
-    it('allows setting offline status', () => {
-      render(<TUGRobotDashboard />)
-      const select = screen.getByTestId('connection-select')
-      fireEvent.change(select, { target: { value: 'offline' } })
-      expect(select).toHaveValue('offline')
-    })
-  })
-
-  describe('Battery Controls', () => {
-    it('renders battery slider', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('battery-slider')).toBeInTheDocument()
-    })
-
-    it('allows changing battery level', () => {
-      render(<TUGRobotDashboard />)
-      const slider = screen.getByTestId('battery-slider')
-      fireEvent.change(slider, { target: { value: '50' } })
-      expect(screen.getByTestId('battery-level')).toHaveTextContent('50')
-    })
-
-    it('battery bar shows correct color for high charge', () => {
-      render(<TUGRobotDashboard />)
-      const bar = screen.getByTestId('battery-bar')
-      expect(bar).toHaveClass('bg-green-500')
-    })
-
-    it('battery bar shows amber for medium charge', () => {
-      render(<TUGRobotDashboard />)
-      const slider = screen.getByTestId('battery-slider')
-      fireEvent.change(slider, { target: { value: '35' } })
-      const bar = screen.getByTestId('battery-bar')
-      expect(bar).toHaveClass('bg-amber-500')
-    })
-
-    it('battery bar shows red for low charge', () => {
-      render(<TUGRobotDashboard />)
-      const slider = screen.getByTestId('battery-slider')
-      fireEvent.change(slider, { target: { value: '15' } })
-      const bar = screen.getByTestId('battery-bar')
-      expect(bar).toHaveClass('bg-red-500')
+    it('shows battery levels', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('bot-battery-TUG-01')).toHaveTextContent('94%')
+      expect(screen.getByTestId('bot-battery-TUG-02')).toHaveTextContent('78%')
     })
   })
 
-  describe('Obstacle Detection', () => {
-    it('renders obstacle toggle', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('obstacle-toggle')).toBeInTheDocument()
+  describe('Deploy Action', () => {
+    it('shows deploy button for IDLE bots', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('deploy-btn-TUG-01')).toBeInTheDocument()
+      expect(screen.getByTestId('deploy-btn-TUG-03')).toBeInTheDocument()
     })
 
-    it('shows path clear by default', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('obstacle-status')).toHaveTextContent('Path Clear')
+    it('does not show deploy button for active bots', () => {
+      render(<TUGDashboard />)
+      expect(screen.queryByTestId('deploy-btn-TUG-02')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('deploy-btn-TUG-04')).not.toBeInTheDocument()
     })
 
-    it('shows obstacle detected when toggled', () => {
-      render(<TUGRobotDashboard />)
-      const toggle = screen.getByTestId('obstacle-toggle')
-      fireEvent.click(toggle)
-      expect(screen.getByTestId('obstacle-status')).toHaveTextContent('Obstacle Detected')
-    })
-  })
-
-  describe('Delivery Queue', () => {
-    it('renders delivery queue', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('delivery-queue')).toBeInTheDocument()
+    it('deploying a bot changes its status to EN_ROUTE', () => {
+      render(<TUGDashboard />)
+      fireEvent.click(screen.getByTestId('deploy-btn-TUG-01'))
+      expect(screen.getByTestId('bot-status-TUG-01')).toHaveTextContent('EN ROUTE')
     })
 
-    it('displays 4 initial deliveries', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('delivery-DEL-001')).toBeInTheDocument()
-      expect(screen.getByTestId('delivery-DEL-002')).toBeInTheDocument()
-      expect(screen.getByTestId('delivery-DEL-003')).toBeInTheDocument()
-      expect(screen.getByTestId('delivery-DEL-004')).toBeInTheDocument()
-    })
-
-    it('shows start buttons for pending deliveries', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('start-DEL-001')).toBeInTheDocument()
-      expect(screen.getByTestId('start-DEL-002')).toBeInTheDocument()
+    it('deploy button has correct text', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('deploy-btn-TUG-01')).toHaveTextContent('Deploy to Sterilization')
     })
   })
 
-  describe('Controls', () => {
-    it('renders control buttons', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('complete-btn')).toBeInTheDocument()
-      expect(screen.getByTestId('abort-btn')).toBeInTheDocument()
-      expect(screen.getByTestId('charge-btn')).toBeInTheDocument()
+  describe('Progress Tracking', () => {
+    it('shows progress bar for EN_ROUTE bots', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByTestId('bot-progress-TUG-02')).toBeInTheDocument()
     })
 
-    it('complete button is disabled when idle', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('complete-btn')).toBeDisabled()
+    it('progress increases over time for EN_ROUTE bots', () => {
+      render(<TUGDashboard />)
+      const initialProgress = screen.getByTestId('bot-progress-TUG-02').style.width
+
+      act(() => {
+        jest.advanceTimersByTime(600)
+      })
+
+      const newProgress = screen.getByTestId('bot-progress-TUG-02').style.width
+      expect(newProgress).not.toBe(initialProgress)
     })
 
-    it('abort button is disabled when idle', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('abort-btn')).toBeDisabled()
-    })
+    it('bot transitions to ARRIVED when progress reaches 100', () => {
+      render(<TUGDashboard />)
+      fireEvent.click(screen.getByTestId('deploy-btn-TUG-01'))
 
-    it('charge button is enabled when idle', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('charge-btn')).not.toBeDisabled()
-    })
+      // Progress to 100% (50 steps * 200ms = 10000ms)
+      act(() => {
+        jest.advanceTimersByTime(10200)
+      })
 
-    it('clicking charge button changes status to charging', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('charge-btn'))
-      expect(screen.getByTestId('robot-status')).toHaveTextContent('charging')
+      expect(screen.getByTestId('bot-status-TUG-01')).toHaveTextContent('ARRIVED')
     })
   })
 
-  describe('Delivery Workflow', () => {
-    it('starting delivery changes status to loading', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-      expect(screen.getByTestId('robot-status')).toHaveTextContent('loading')
+  describe('Return Action', () => {
+    it('shows return button for ARRIVED bots', () => {
+      render(<TUGDashboard />)
+      fireEvent.click(screen.getByTestId('deploy-btn-TUG-01'))
+
+      act(() => {
+        jest.advanceTimersByTime(10200)
+      })
+
+      expect(screen.getByTestId('return-btn-TUG-01')).toBeInTheDocument()
     })
 
-    it('after loading, status changes to en-route', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
+    it('clicking return changes status to RETURNING', () => {
+      render(<TUGDashboard />)
+      fireEvent.click(screen.getByTestId('deploy-btn-TUG-01'))
 
       act(() => {
-        jest.advanceTimersByTime(2100)
+        jest.advanceTimersByTime(10200)
       })
 
-      expect(screen.getByTestId('robot-status')).toHaveTextContent('en route')
+      fireEvent.click(screen.getByTestId('return-btn-TUG-01'))
+      expect(screen.getByTestId('bot-status-TUG-01')).toHaveTextContent('RETURNING')
     })
 
-    it('destination is shown when en-route', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
+    it('bot returns to IDLE after RETURNING completes', () => {
+      render(<TUGDashboard />)
+      fireEvent.click(screen.getByTestId('deploy-btn-TUG-01'))
 
+      // EN_ROUTE -> ARRIVED
       act(() => {
-        jest.advanceTimersByTime(2100)
+        jest.advanceTimersByTime(10200)
       })
 
-      expect(screen.getByTestId('destination')).toHaveTextContent('ICU-3')
-    })
+      fireEvent.click(screen.getByTestId('return-btn-TUG-01'))
 
-    it('start buttons are disabled when robot is busy', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-
-      expect(screen.getByTestId('start-DEL-002')).toBeDisabled()
-    })
-
-    it('abort button is enabled when en-route', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-
+      // RETURNING -> IDLE (34 steps * 200ms ≈ 6800ms)
       act(() => {
-        jest.advanceTimersByTime(2100)
+        jest.advanceTimersByTime(7000)
       })
 
-      expect(screen.getByTestId('abort-btn')).not.toBeDisabled()
-    })
-
-    it('complete button is enabled when en-route', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-
-      act(() => {
-        jest.advanceTimersByTime(2100)
-      })
-
-      expect(screen.getByTestId('complete-btn')).not.toBeDisabled()
-    })
-
-    it('aborting delivery returns robot to idle', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-
-      act(() => {
-        jest.advanceTimersByTime(2100)
-      })
-
-      fireEvent.click(screen.getByTestId('abort-btn'))
-      expect(screen.getByTestId('robot-status')).toHaveTextContent('idle')
-    })
-
-    it('completing delivery changes status to unloading', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-
-      act(() => {
-        jest.advanceTimersByTime(2100)
-      })
-
-      fireEvent.click(screen.getByTestId('complete-btn'))
-      expect(screen.getByTestId('robot-status')).toHaveTextContent('unloading')
-    })
-
-    it('after unloading, delivery is removed from queue', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-
-      act(() => {
-        jest.advanceTimersByTime(2100)
-      })
-
-      fireEvent.click(screen.getByTestId('complete-btn'))
-
-      act(() => {
-        jest.advanceTimersByTime(1600)
-      })
-
-      expect(screen.queryByTestId('delivery-DEL-001')).not.toBeInTheDocument()
-    })
-
-    it('after completion, trip count increases', () => {
-      render(<TUGRobotDashboard />)
-      fireEvent.click(screen.getByTestId('start-DEL-001'))
-
-      act(() => {
-        jest.advanceTimersByTime(2100)
-      })
-
-      fireEvent.click(screen.getByTestId('complete-btn'))
-
-      act(() => {
-        jest.advanceTimersByTime(1600)
-      })
-
-      expect(screen.getByTestId('trip-count')).toHaveTextContent('25')
+      expect(screen.getByTestId('bot-status-TUG-01')).toHaveTextContent('IDLE')
     })
   })
 
-  describe('Offline Mode', () => {
-    it('start buttons are disabled when offline', () => {
-      render(<TUGRobotDashboard />)
-      const select = screen.getByTestId('connection-select')
-      fireEvent.change(select, { target: { value: 'offline' } })
-
-      expect(screen.getByTestId('start-DEL-001')).toBeDisabled()
-    })
-  })
-
-  describe('Recent Trips', () => {
-    it('renders trips table', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('trips-table')).toBeInTheDocument()
-    })
-
-    it('displays recent trips', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByTestId('trip-TRP-120')).toBeInTheDocument()
-      expect(screen.getByTestId('trip-TRP-119')).toBeInTheDocument()
-      expect(screen.getByTestId('trip-TRP-118')).toBeInTheDocument()
-      expect(screen.getByTestId('trip-TRP-117')).toBeInTheDocument()
+  describe('Stats Display', () => {
+    it('displays quick stats', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByText('Avg Transit Time')).toBeInTheDocument()
+      expect(screen.getByText('On-Time Rate')).toBeInTheDocument()
+      expect(screen.getByText('Items Transported')).toBeInTheDocument()
+      expect(screen.getByText('Fleet Uptime')).toBeInTheDocument()
     })
   })
 
   describe('Footer', () => {
-    it('displays version information', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByText('Aethon TUG Fleet Manager v3.2.1')).toBeInTheDocument()
+    it('displays version info', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByText('Aethon TUG Fleet Manager v4.1.2')).toBeInTheDocument()
     })
 
-    it('displays facility name', () => {
-      render(<TUGRobotDashboard />)
-      expect(screen.getByText('Memorial General Hospital')).toBeInTheDocument()
+    it('displays facility info', () => {
+      render(<TUGDashboard />)
+      expect(screen.getByText(/Memorial General Hospital/)).toBeInTheDocument()
     })
   })
 })

@@ -2,515 +2,393 @@
 
 import { useState, useEffect } from 'react'
 
-export default function CameraSystem() {
-  const [panValue, setPanValue] = useState(180)
-  const [tiltValue, setTiltValue] = useState(45)
-  const [zoomLevel, setZoomLevel] = useState(1)
-  const [isRecording, setIsRecording] = useState(true)
-  const [selectedPreset, setSelectedPreset] = useState<number | null>(null)
-  const [activeCamera, setActiveCamera] = useState('CAM-01')
-  const [isPTZMoving, setIsPTZMoving] = useState(false)
-  const [ptzDirection, setPtzDirection] = useState<string | null>(null)
-  const [brightness, setBrightness] = useState(50)
-  const [contrast, setContrast] = useState(50)
-  const [irMode, setIrMode] = useState<'auto' | 'on' | 'off'>('auto')
-  const [audioEnabled, setAudioEnabled] = useState(true)
-  const [motionDetection, setMotionDetection] = useState(true)
-  const [streamQuality, setStreamQuality] = useState<'high' | 'medium' | 'low'>('high')
+interface MetricData {
+  id: string
+  category: string
+  name: string
+  value: string | number
+  unit: string
+  status: 'normal' | 'warning' | 'critical'
+  lastUpdated: string
+}
 
-  const cameras = [
-    { id: 'CAM-01', name: 'OR-1 Overview', ip: '192.168.1.101', status: 'online', model: 'Axis P5655-E' },
-    { id: 'CAM-02', name: 'OR-1 Surgical Field', ip: '192.168.1.102', status: 'online', model: 'Axis V5915' },
-    { id: 'CAM-03', name: 'OR-2 Overview', ip: '192.168.1.103', status: 'online', model: 'Axis P5655-E' },
-    { id: 'CAM-04', name: 'OR-2 Surgical Field', ip: '192.168.1.104', status: 'warning', model: 'Axis V5915' },
-    { id: 'CAM-05', name: 'Corridor A', ip: '192.168.1.105', status: 'offline', model: 'Axis P3245-V' },
-  ]
-
-  const presets = [
-    { id: 1, name: 'Wide View', pan: 180, tilt: 30, zoom: 1 },
-    { id: 2, name: 'Table Center', pan: 175, tilt: 60, zoom: 2.5 },
-    { id: 3, name: 'Entry Door', pan: 90, tilt: 45, zoom: 1.5 },
-    { id: 4, name: 'Equipment Bay', pan: 270, tilt: 40, zoom: 1.8 },
-  ]
-
-  const currentCamera = cameras.find(c => c.id === activeCamera)!
-
-  // Simulate PTZ movement
-  const handlePTZControl = (direction: string) => {
-    setIsPTZMoving(true)
-    setPtzDirection(direction)
-
-    const interval = setInterval(() => {
-      switch (direction) {
-        case 'up':
-          setTiltValue(v => Math.min(90, v + 2))
-          break
-        case 'down':
-          setTiltValue(v => Math.max(0, v - 2))
-          break
-        case 'left':
-          setPanValue(v => (v - 3 + 360) % 360)
-          break
-        case 'right':
-          setPanValue(v => (v + 3) % 360)
-          break
-      }
-    }, 50)
-
-    const handleMouseUp = () => {
-      clearInterval(interval)
-      setIsPTZMoving(false)
-      setPtzDirection(null)
-      window.removeEventListener('mouseup', handleMouseUp)
-    }
-
-    window.addEventListener('mouseup', handleMouseUp)
-  }
-
-  const handleZoom = (direction: 'in' | 'out') => {
-    setZoomLevel(v => {
-      if (direction === 'in') return Math.min(10, v + 0.5)
-      return Math.max(1, v - 0.5)
-    })
-  }
-
-  const handlePreset = (preset: typeof presets[0]) => {
-    setSelectedPreset(preset.id)
-    setPanValue(preset.pan)
-    setTiltValue(preset.tilt)
-    setZoomLevel(preset.zoom)
-
-    setTimeout(() => setSelectedPreset(null), 1000)
-  }
-
-  const handleSnapshot = () => {
-    alert('Snapshot saved to: /recordings/snapshots/CAM01_' + Date.now() + '.jpg')
-  }
-
-  // Simulate time display
+export default function VariableTrackerDashboard() {
+  const [activeTab, setActiveTab] = useState<'all' | 'uv' | 'tug'>('all')
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [autoRefresh, setAutoRefresh] = useState(true)
+
+  const [metrics, setMetrics] = useState<MetricData[]>([
+    // UV Robot Metrics
+    { id: 'UV-001', category: 'UV', name: 'Cycle Progress', value: 0, unit: '%', status: 'normal', lastUpdated: '10:45:32' },
+    { id: 'UV-002', category: 'UV', name: 'Battery Level', value: 87, unit: '%', status: 'normal', lastUpdated: '10:45:30' },
+    { id: 'UV-003', category: 'UV', name: 'UV Intensity', value: 85, unit: '%', status: 'normal', lastUpdated: '10:45:28' },
+    { id: 'UV-004', category: 'UV', name: 'Connection Status', value: 'Online', unit: '', status: 'normal', lastUpdated: '10:45:32' },
+    { id: 'UV-005', category: 'UV', name: 'Current Room', value: 'OR-1', unit: '', status: 'normal', lastUpdated: '10:45:32' },
+    { id: 'UV-006', category: 'UV', name: 'Cycles Today', value: 12, unit: 'cycles', status: 'normal', lastUpdated: '10:45:32' },
+    { id: 'UV-007', category: 'UV', name: 'Lamp Hours', value: 1247, unit: 'hrs', status: 'warning', lastUpdated: '10:45:32' },
+    { id: 'UV-008', category: 'UV', name: 'Device Health', value: 'Good', unit: '', status: 'normal', lastUpdated: '10:45:32' },
+    // TUG Robot Metrics
+    { id: 'TUG-001', category: 'TUG', name: 'Active Units', value: 2, unit: 'of 4', status: 'normal', lastUpdated: '10:45:31' },
+    { id: 'TUG-002', category: 'TUG', name: 'Units EN_ROUTE', value: 1, unit: 'units', status: 'normal', lastUpdated: '10:45:31' },
+    { id: 'TUG-003', category: 'TUG', name: 'Units IDLE', value: 2, unit: 'units', status: 'normal', lastUpdated: '10:45:31' },
+    { id: 'TUG-004', category: 'TUG', name: 'Trips Today', value: 47, unit: 'trips', status: 'normal', lastUpdated: '10:45:31' },
+    { id: 'TUG-005', category: 'TUG', name: 'Avg Transit Time', value: '3:42', unit: 'min', status: 'normal', lastUpdated: '10:45:31' },
+    { id: 'TUG-006', category: 'TUG', name: 'On-Time Rate', value: 98.2, unit: '%', status: 'normal', lastUpdated: '10:45:31' },
+    { id: 'TUG-007', category: 'TUG', name: 'Fleet Battery Avg', value: 72, unit: '%', status: 'normal', lastUpdated: '10:45:31' },
+    { id: 'TUG-008', category: 'TUG', name: 'Pending Deliveries', value: 3, unit: 'items', status: 'warning', lastUpdated: '10:45:31' },
+  ])
+
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(interval)
   }, [])
 
+  // Simulate metric updates
+  useEffect(() => {
+    if (!autoRefresh) return
+    const interval = setInterval(() => {
+      setMetrics(prev => prev.map(metric => {
+        const time = new Date().toLocaleTimeString('en-US', { hour12: false })
+        if (metric.id === 'UV-002') {
+          const newVal = Math.max(0, Math.min(100, (metric.value as number) + Math.floor((Math.random() - 0.5) * 3)))
+          return { ...metric, value: newVal, lastUpdated: time, status: newVal < 20 ? 'critical' : newVal < 50 ? 'warning' : 'normal' }
+        }
+        if (metric.id === 'TUG-007') {
+          const newVal = Math.max(0, Math.min(100, (metric.value as number) + Math.floor((Math.random() - 0.5) * 5)))
+          return { ...metric, value: newVal, lastUpdated: time, status: newVal < 30 ? 'critical' : newVal < 50 ? 'warning' : 'normal' }
+        }
+        return { ...metric, lastUpdated: time }
+      }))
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [autoRefresh])
+
+  const filteredMetrics = activeTab === 'all' ? metrics : metrics.filter(m => m.category === activeTab.toUpperCase())
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'normal': return { bg: '#e8f5e9', color: '#2e7d32', border: '#a5d6a7' }
+      case 'warning': return { bg: '#fff8e1', color: '#f57f17', border: '#ffe082' }
+      case 'critical': return { bg: '#ffebee', color: '#c62828', border: '#ef9a9a' }
+      default: return { bg: '#f5f5f5', color: '#616161', border: '#e0e0e0' }
+    }
+  }
+
+  const refreshMetrics = () => {
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false })
+    setMetrics(prev => prev.map(m => ({ ...m, lastUpdated: time })))
+  }
+
   return (
-    <div className="min-h-screen bg-[#1a1a1a] text-gray-200">
-      {/* Header */}
-      <header className="bg-[#2a2a2a] border-b border-[#444] px-4 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <svg className="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-              </svg>
-              <div>
-                <h1 className="text-lg font-semibold">SurgView Pro</h1>
-                <p className="text-xs text-gray-400">PTZ Camera Management</p>
-              </div>
+    <div
+      className="min-h-screen"
+      style={{
+        background: '#e4e4e4',
+        fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
+      }}
+    >
+      {/* Title Bar */}
+      <div
+        style={{
+          background: 'linear-gradient(180deg, #4a7ab0 0%, #3d6a9f 50%, #2d5a8f 100%)',
+          borderBottom: '1px solid #1e4a7f',
+          padding: '8px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              width: '24px',
+              height: '24px',
+              background: '#fff',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <span style={{ color: '#3d6a9f', fontWeight: 'bold', fontSize: '14px' }}>V</span>
+          </div>
+          <span style={{ color: '#fff', fontWeight: '600', fontSize: '14px' }}>
+            Variable Tracker - Equipment Monitoring System
+          </span>
+        </div>
+        <div style={{ color: '#d0e0f0', fontSize: '12px' }}>
+          Memorial General Hospital
+        </div>
+      </div>
+
+      {/* Toolbar */}
+      <div
+        style={{
+          background: 'linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%)',
+          borderBottom: '1px solid #c0c0c0',
+          padding: '6px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={refreshMetrics}
+            data-testid="refresh-btn"
+            style={{
+              padding: '4px 12px',
+              background: 'linear-gradient(180deg, #fff 0%, #e8e8e8 100%)',
+              border: '1px solid #a0a0a0',
+              borderRadius: '3px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            ↻ Refresh
+          </button>
+          <div style={{ width: '1px', height: '20px', background: '#c0c0c0', margin: '0 4px' }} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#444' }}>
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+              data-testid="auto-refresh-toggle"
+            />
+            Auto-Refresh
+          </label>
+        </div>
+        <div style={{ fontSize: '12px', color: '#666' }}>
+          Last Updated: <span style={{ fontFamily: 'Consolas, monospace' }} data-testid="last-update-time">{currentTime.toLocaleTimeString()}</span>
+        </div>
+      </div>
+
+      {/* Tab Bar */}
+      <div
+        style={{
+          background: '#f0f0f0',
+          borderBottom: '1px solid #c0c0c0',
+          padding: '0 16px',
+          display: 'flex',
+          gap: '2px'
+        }}
+      >
+        {[
+          { id: 'all', label: 'All Variables' },
+          { id: 'uv', label: 'UV Disinfection' },
+          { id: 'tug', label: 'TUG Fleet' }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as typeof activeTab)}
+            data-testid={`tab-${tab.id}`}
+            style={{
+              padding: '8px 16px',
+              background: activeTab === tab.id
+                ? 'linear-gradient(180deg, #fff 0%, #f8f8f8 100%)'
+                : 'linear-gradient(180deg, #e8e8e8 0%, #d8d8d8 100%)',
+              border: '1px solid #a0a0a0',
+              borderBottom: activeTab === tab.id ? '1px solid #fff' : '1px solid #a0a0a0',
+              borderRadius: '4px 4px 0 0',
+              marginBottom: '-1px',
+              fontSize: '12px',
+              fontWeight: activeTab === tab.id ? '600' : '400',
+              color: activeTab === tab.id ? '#333' : '#666',
+              cursor: 'pointer'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Content */}
+      <div style={{ padding: '16px' }}>
+        {/* Summary Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #c0c0c0',
+              borderRadius: '4px',
+              padding: '12px'
+            }}
+            data-testid="summary-total"
+          >
+            <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', marginBottom: '4px' }}>Total Variables</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#333' }}>{filteredMetrics.length}</div>
+          </div>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #c0c0c0',
+              borderRadius: '4px',
+              padding: '12px'
+            }}
+            data-testid="summary-normal"
+          >
+            <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', marginBottom: '4px' }}>Normal</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#2e7d32' }}>
+              {filteredMetrics.filter(m => m.status === 'normal').length}
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-gray-400">Memorial General Hospital</span>
-            <span className="font-mono">{currentTime.toLocaleTimeString()}</span>
-            <button className="px-3 py-1 bg-[#333] hover:bg-[#444] rounded border border-[#555]">
-              Settings
-            </button>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #c0c0c0',
+              borderRadius: '4px',
+              padding: '12px'
+            }}
+            data-testid="summary-warning"
+          >
+            <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', marginBottom: '4px' }}>Warning</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#f57f17' }}>
+              {filteredMetrics.filter(m => m.status === 'warning').length}
+            </div>
+          </div>
+          <div
+            style={{
+              background: '#fff',
+              border: '1px solid #c0c0c0',
+              borderRadius: '4px',
+              padding: '12px'
+            }}
+            data-testid="summary-critical"
+          >
+            <div style={{ fontSize: '11px', color: '#666', textTransform: 'uppercase', marginBottom: '4px' }}>Critical</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#c62828' }}>
+              {filteredMetrics.filter(m => m.status === 'critical').length}
+            </div>
           </div>
         </div>
-      </header>
 
-      <div className="flex">
-        {/* Camera List Sidebar */}
-        <aside className="w-64 bg-[#222] border-r border-[#444] min-h-[calc(100vh-56px)]">
-          <div className="p-3 border-b border-[#444]">
-            <h2 className="text-sm font-semibold text-gray-400 uppercase">Cameras</h2>
+        {/* Data Table */}
+        <div
+          style={{
+            background: '#fff',
+            border: '1px solid #c0c0c0',
+            borderRadius: '4px',
+            overflow: 'hidden'
+          }}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(180deg, #4a7ab0 0%, #3d6a9f 100%)',
+              padding: '8px 12px',
+              color: '#fff',
+              fontSize: '12px',
+              fontWeight: '600'
+            }}
+          >
+            Variable List
           </div>
-          <div className="space-y-1 p-2">
-            {cameras.map((camera) => (
-              <button
-                key={camera.id}
-                onClick={() => setActiveCamera(camera.id)}
-                className={`w-full text-left p-3 rounded transition-colors ${
-                  activeCamera === camera.id
-                    ? 'bg-blue-600'
-                    : 'hover:bg-[#333]'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-sm">{camera.name}</span>
-                  <span className={`w-2 h-2 rounded-full ${
-                    camera.status === 'online' ? 'bg-green-500' :
-                    camera.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
-                  }`} />
-                </div>
-                <div className="text-xs text-gray-400 mt-1">{camera.id}</div>
-              </button>
-            ))}
-          </div>
-
-          {/* Recording Status */}
-          <div className="p-3 border-t border-[#444] mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm">Recording</span>
-              <button
-                onClick={() => setIsRecording(!isRecording)}
-                className={`w-12 h-6 rounded-full transition-colors relative ${
-                  isRecording ? 'bg-red-600' : 'bg-gray-600'
-                }`}
-              >
-                <span className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-transform ${
-                  isRecording ? 'left-6' : 'left-0.5'
-                }`} />
-              </button>
-            </div>
-            {isRecording && (
-              <div className="flex items-center gap-2 text-xs text-red-400">
-                <span className="w-2 h-2 bg-red-500 rounded-full rec-pulse" />
-                <span>Recording to NVR-01</span>
-              </div>
-            )}
-          </div>
-
-          {/* Camera Info */}
-          <div className="p-3 border-t border-[#444]">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">Camera Info</h3>
-            <div className="space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Model:</span>
-                <span>{currentCamera.model}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">IP:</span>
-                <span className="font-mono">{currentCamera.ip}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Status:</span>
-                <span className={currentCamera.status === 'online' ? 'text-green-400' : 'text-yellow-400'}>
-                  {currentCamera.status.charAt(0).toUpperCase() + currentCamera.status.slice(1)}
-                </span>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-4">
-          <div className="grid grid-cols-12 gap-4">
-            {/* Video Feed */}
-            <div className="col-span-8">
-              <div className="bg-black rounded-lg overflow-hidden relative aspect-video">
-                {/* Simulated video feed - gradient background */}
-                <div
-                  className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative"
-                  style={{
-                    filter: `brightness(${brightness / 50}) contrast(${contrast / 50})`
-                  }}
-                >
-                  {/* Grid overlay */}
-                  <div className="absolute inset-0 opacity-20"
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }} data-testid="metrics-table">
+            <thead>
+              <tr style={{ background: '#f0f0f0', borderBottom: '1px solid #c0c0c0' }}>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', color: '#444', borderRight: '1px solid #e0e0e0' }}>ID</th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', color: '#444', borderRight: '1px solid #e0e0e0' }}>Category</th>
+                <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: '600', color: '#444', borderRight: '1px solid #e0e0e0' }}>Variable Name</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600', color: '#444', borderRight: '1px solid #e0e0e0' }}>Value</th>
+                <th style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600', color: '#444', borderRight: '1px solid #e0e0e0' }}>Status</th>
+                <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: '600', color: '#444' }}>Last Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMetrics.map((metric, index) => {
+                const statusStyle = getStatusStyle(metric.status)
+                return (
+                  <tr
+                    key={metric.id}
+                    data-testid={`metric-row-${metric.id}`}
                     style={{
-                      backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
-                      backgroundSize: '50px 50px'
+                      background: index % 2 === 0 ? '#fff' : '#fafafa',
+                      borderBottom: '1px solid #e8e8e8'
                     }}
-                  />
-
-                  {/* Simulated OR view */}
-                  <div className="text-center">
-                    <div className="w-32 h-20 border-2 border-gray-600 rounded-lg mb-2 mx-auto flex items-center justify-center">
-                      <span className="text-xs text-gray-500">Operating Table</span>
-                    </div>
-                    <p className="text-gray-500 text-sm">Live Feed - {currentCamera.name}</p>
-                  </div>
-
-                  {/* PTZ indicator */}
-                  {isPTZMoving && (
-                    <div className="absolute top-4 left-4 bg-yellow-500/80 text-black px-3 py-1 rounded text-sm font-medium">
-                      PTZ Moving: {ptzDirection?.toUpperCase()}
-                    </div>
-                  )}
-
-                  {/* Recording indicator */}
-                  {isRecording && (
-                    <div className="absolute top-4 right-4 flex items-center gap-2 bg-red-600/80 px-3 py-1 rounded">
-                      <span className="w-2 h-2 bg-white rounded-full rec-pulse" />
-                      <span className="text-xs font-medium">REC</span>
-                    </div>
-                  )}
-
-                  {/* Timestamp */}
-                  <div className="absolute bottom-4 left-4 font-mono text-sm bg-black/50 px-2 py-1 rounded">
-                    {currentTime.toLocaleDateString()} {currentTime.toLocaleTimeString()}
-                  </div>
-
-                  {/* Camera ID */}
-                  <div className="absolute bottom-4 right-4 font-mono text-sm bg-black/50 px-2 py-1 rounded">
-                    {activeCamera} | Zoom: {zoomLevel.toFixed(1)}x
-                  </div>
-                </div>
-              </div>
-
-              {/* Playback Controls */}
-              <div className="mt-4 bg-[#222] rounded-lg p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-[#333] rounded">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
-                    </svg>
-                  </button>
-                  <button className="p-2 hover:bg-[#333] rounded">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M8 5v14l11-7z"/>
-                    </svg>
-                  </button>
-                  <button className="p-2 hover:bg-[#333] rounded">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
-                    </svg>
-                  </button>
-                  <button className="p-2 hover:bg-[#333] rounded">
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12.5 6l8.5 6-8.5 6V6zm-4 0v12l-8.5-6 8.5-6z"/>
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <button
-                    onClick={handleSnapshot}
-                    className="px-4 py-2 bg-[#333] hover:bg-[#444] rounded flex items-center gap-2 text-sm"
                   >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M9 3L7.17 5H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-3.17L15 3H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-                    </svg>
-                    Snapshot
-                  </button>
-                  <button className="px-4 py-2 bg-[#333] hover:bg-[#444] rounded flex items-center gap-2 text-sm">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-                    </svg>
-                    Event Log
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">Quality:</span>
-                  <select
-                    value={streamQuality}
-                    onChange={(e) => setStreamQuality(e.target.value as any)}
-                    className="bg-[#333] border border-[#555] rounded px-2 py-1 text-sm"
-                  >
-                    <option value="high">1080p</option>
-                    <option value="medium">720p</option>
-                    <option value="low">480p</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* PTZ Controls */}
-            <div className="col-span-4 space-y-4">
-              {/* D-Pad */}
-              <div className="bg-[#222] rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-400 mb-4">PTZ Control</h3>
-
-                <div className="flex justify-center mb-4">
-                  <div className="relative w-36 h-36">
-                    {/* Center circle */}
-                    <div className="absolute inset-6 bg-[#333] rounded-full border-2 border-[#444]" />
-
-                    {/* Direction buttons */}
-                    <button
-                      onMouseDown={() => handlePTZControl('up')}
-                      className={`absolute top-0 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                        ptzDirection === 'up' ? 'bg-blue-600' : 'bg-[#333] hover:bg-[#444]'
-                      }`}
+                    <td style={{ padding: '8px 12px', fontFamily: 'Consolas, monospace', color: '#666', borderRight: '1px solid #f0f0f0' }}>
+                      {metric.id}
+                    </td>
+                    <td style={{ padding: '8px 12px', borderRight: '1px solid #f0f0f0' }}>
+                      <span
+                        style={{
+                          padding: '2px 8px',
+                          borderRadius: '3px',
+                          fontSize: '11px',
+                          fontWeight: '500',
+                          background: metric.category === 'UV' ? '#e3f2fd' : '#f3e5f5',
+                          color: metric.category === 'UV' ? '#1565c0' : '#7b1fa2',
+                          border: `1px solid ${metric.category === 'UV' ? '#90caf9' : '#ce93d8'}`
+                        }}
+                      >
+                        {metric.category}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', fontWeight: '500', color: '#333', borderRight: '1px solid #f0f0f0' }}>
+                      {metric.name}
+                    </td>
+                    <td
+                      style={{ padding: '8px 12px', textAlign: 'right', fontFamily: 'Consolas, monospace', fontWeight: '600', color: '#333', borderRight: '1px solid #f0f0f0' }}
+                      data-testid={`metric-value-${metric.id}`}
                     >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M7 14l5-5 5 5H7z"/>
-                      </svg>
-                    </button>
-                    <button
-                      onMouseDown={() => handlePTZControl('down')}
-                      className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                        ptzDirection === 'down' ? 'bg-blue-600' : 'bg-[#333] hover:bg-[#444]'
-                      }`}
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M7 10l5 5 5-5H7z"/>
-                      </svg>
-                    </button>
-                    <button
-                      onMouseDown={() => handlePTZControl('left')}
-                      className={`absolute left-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                        ptzDirection === 'left' ? 'bg-blue-600' : 'bg-[#333] hover:bg-[#444]'
-                      }`}
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M14 7l-5 5 5 5V7z"/>
-                      </svg>
-                    </button>
-                    <button
-                      onMouseDown={() => handlePTZControl('right')}
-                      className={`absolute right-0 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-                        ptzDirection === 'right' ? 'bg-blue-600' : 'bg-[#333] hover:bg-[#444]'
-                      }`}
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M10 17l5-5-5-5v10z"/>
-                      </svg>
-                    </button>
+                      {metric.value} {metric.unit}
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'center', borderRight: '1px solid #f0f0f0' }}>
+                      <span
+                        style={{
+                          padding: '3px 10px',
+                          borderRadius: '3px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          textTransform: 'uppercase',
+                          background: statusStyle.bg,
+                          color: statusStyle.color,
+                          border: `1px solid ${statusStyle.border}`
+                        }}
+                        data-testid={`metric-status-${metric.id}`}
+                      >
+                        {metric.status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '8px 12px', textAlign: 'right', fontFamily: 'Consolas, monospace', color: '#888', fontSize: '11px' }}>
+                      {metric.lastUpdated}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-                    {/* Home button */}
-                    <button
-                      onClick={() => { setPanValue(180); setTiltValue(45); }}
-                      className="absolute inset-1/4 bg-[#444] hover:bg-[#555] rounded-full flex items-center justify-center text-xs"
-                    >
-                      HOME
-                    </button>
-                  </div>
-                </div>
-
-                {/* Position indicators */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-400">Pan:</span>
-                    <span className="ml-2 font-mono">{panValue}°</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Tilt:</span>
-                    <span className="ml-2 font-mono">{tiltValue}°</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Zoom Control */}
-              <div className="bg-[#222] rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-400 mb-4">Zoom</h3>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => handleZoom('out')}
-                    className="w-10 h-10 bg-[#333] hover:bg-[#444] rounded flex items-center justify-center text-xl"
-                  >
-                    −
-                  </button>
-                  <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    step="0.1"
-                    value={zoomLevel}
-                    onChange={(e) => setZoomLevel(parseFloat(e.target.value))}
-                    className="flex-1 accent-blue-500"
-                  />
-                  <button
-                    onClick={() => handleZoom('in')}
-                    className="w-10 h-10 bg-[#333] hover:bg-[#444] rounded flex items-center justify-center text-xl"
-                  >
-                    +
-                  </button>
-                </div>
-                <div className="text-center mt-2 font-mono text-sm">{zoomLevel.toFixed(1)}x</div>
-              </div>
-
-              {/* Presets */}
-              <div className="bg-[#222] rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-400 mb-4">Presets</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {presets.map((preset) => (
-                    <button
-                      key={preset.id}
-                      onClick={() => handlePreset(preset)}
-                      className={`px-3 py-2 rounded text-sm transition-colors ${
-                        selectedPreset === preset.id
-                          ? 'bg-blue-600'
-                          : 'bg-[#333] hover:bg-[#444]'
-                      }`}
-                    >
-                      {preset.name}
-                    </button>
-                  ))}
-                </div>
-                <button className="w-full mt-3 px-3 py-2 bg-[#333] hover:bg-[#444] rounded text-sm border border-dashed border-[#555]">
-                  + Save Current Position
-                </button>
-              </div>
-
-              {/* Image Settings */}
-              <div className="bg-[#222] rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-400 mb-4">Image Settings</h3>
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span>Brightness</span>
-                      <span>{brightness}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={brightness}
-                      onChange={(e) => setBrightness(parseInt(e.target.value))}
-                      className="w-full accent-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex justify-between text-xs mb-1">
-                      <span>Contrast</span>
-                      <span>{contrast}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={contrast}
-                      onChange={(e) => setContrast(parseInt(e.target.value))}
-                      className="w-full accent-blue-500"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">IR Mode</span>
-                    <select
-                      value={irMode}
-                      onChange={(e) => setIrMode(e.target.value as any)}
-                      className="bg-[#333] border border-[#555] rounded px-2 py-1 text-sm"
-                    >
-                      <option value="auto">Auto</option>
-                      <option value="on">On</option>
-                      <option value="off">Off</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Audio</span>
-                    <button
-                      onClick={() => setAudioEnabled(!audioEnabled)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${
-                        audioEnabled ? 'bg-blue-600' : 'bg-gray-600'
-                      }`}
-                    >
-                      <span className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-transform ${
-                        audioEnabled ? 'left-6' : 'left-0.5'
-                      }`} />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Motion Detection</span>
-                    <button
-                      onClick={() => setMotionDetection(!motionDetection)}
-                      className={`w-12 h-6 rounded-full transition-colors relative ${
-                        motionDetection ? 'bg-blue-600' : 'bg-gray-600'
-                      }`}
-                    >
-                      <span className={`absolute w-5 h-5 bg-white rounded-full top-0.5 transition-transform ${
-                        motionDetection ? 'left-6' : 'left-0.5'
-                      }`} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </main>
+      {/* Status Bar */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(180deg, #e8e8e8 0%, #d0d0d0 100%)',
+          borderTop: '1px solid #a0a0a0',
+          padding: '4px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          fontSize: '11px',
+          color: '#555'
+        }}
+      >
+        <div style={{ display: 'flex', gap: '24px' }}>
+          <span>Variables: {filteredMetrics.length}</span>
+          <span>|</span>
+          <span style={{ color: '#2e7d32' }}>● Normal: {filteredMetrics.filter(m => m.status === 'normal').length}</span>
+          <span style={{ color: '#f57f17' }}>● Warning: {filteredMetrics.filter(m => m.status === 'warning').length}</span>
+          <span style={{ color: '#c62828' }}>● Critical: {filteredMetrics.filter(m => m.status === 'critical').length}</span>
+        </div>
+        <div>
+          Variable Tracker v2.1.4 | Memorial General Hospital
+        </div>
       </div>
     </div>
   )

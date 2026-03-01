@@ -29,10 +29,10 @@ export default function Home() {
       color: 'from-orange-500 to-red-600',
     },
     {
-      name: 'PTZ Surveillance Camera',
+      name: 'Variable Tracker',
       path: '/camera',
-      description: 'Reolink/Axis style - Video feed with controls',
-      color: 'from-gray-700 to-gray-900',
+      description: 'Epic-style 2010s UI - UV & TUG metrics monitoring',
+      color: 'from-blue-600 to-blue-800',
     },
   ]
 
