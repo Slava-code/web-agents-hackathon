@@ -17,10 +17,10 @@ export default function Home() {
       color: 'from-green-600 to-teal-600',
     },
     {
-      name: 'Sterilizer/Autoclave System',
-      path: '/sterilizer',
-      description: 'Legacy CSSD - 2010-era enterprise look',
-      color: 'from-blue-700 to-gray-600',
+      name: 'Aethon TUG Robot',
+      path: '/tug-robot',
+      description: 'Autonomous mobile robot - Delivery tracking, fleet management',
+      color: 'from-blue-500 to-slate-700',
     },
     {
       name: 'Room Scheduling / EHR System',
@@ -29,10 +29,10 @@ export default function Home() {
       color: 'from-orange-500 to-red-600',
     },
     {
-      name: 'PTZ Surveillance Camera',
+      name: 'Variable Tracker',
       path: '/camera',
-      description: 'Reolink/Axis style - Video feed with controls',
-      color: 'from-gray-700 to-gray-900',
+      description: 'Epic-style 2010s UI - UV & TUG metrics monitoring',
+      color: 'from-blue-600 to-blue-800',
     },
   ]
 
