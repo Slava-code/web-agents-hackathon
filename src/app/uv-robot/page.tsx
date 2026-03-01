@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
 
 export default function UVRobotPortal() {
   const [selectedRoom, setSelectedRoom] = useState('OR-1')
@@ -44,6 +45,20 @@ export default function UVRobotPortal() {
               },
               ...h,
             ])
+            // Report cycle completion to Convex
+            updateDeviceStatus({
+              deviceId: DEVICE_IDS.UV_ROBOT,
+              status: 'ready',
+              currentAction: 'Cycle complete'
+            })
+            updateDeviceFields({
+              deviceId: DEVICE_IDS.UV_ROBOT,
+              fields: {
+                cycleActive: false,
+                progress: 100,
+                lastAction: 'completed'
+              }
+            })
             return 0
           }
           return prev + 2
@@ -57,6 +72,22 @@ export default function UVRobotPortal() {
     if (!cycleActive && connectionStatus === 'connected') {
       setCycleActive(true)
       setProgress(0)
+      // Report to Convex backend
+      updateDeviceStatus({
+        deviceId: DEVICE_IDS.UV_ROBOT,
+        status: 'configuring',
+        currentAction: `Running ${mode} cycle in ${selectedRoom}`
+      })
+      updateDeviceFields({
+        deviceId: DEVICE_IDS.UV_ROBOT,
+        fields: {
+          cycleActive: true,
+          currentRoom: selectedRoom,
+          mode: mode,
+          intensity: intensity,
+          progress: 0
+        }
+      })
     }
   }
 
@@ -74,6 +105,20 @@ export default function UVRobotPortal() {
       },
       ...h,
     ])
+    // Report to Convex backend
+    updateDeviceStatus({
+      deviceId: DEVICE_IDS.UV_ROBOT,
+      status: 'idle',
+      currentAction: 'Cycle aborted'
+    })
+    updateDeviceFields({
+      deviceId: DEVICE_IDS.UV_ROBOT,
+      fields: {
+        cycleActive: false,
+        progress: 0,
+        lastAction: 'aborted'
+      }
+    })
   }
 
   const handleEmergencyStop = () => {

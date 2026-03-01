@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
 
 interface Sensor {
   id: string
@@ -106,10 +107,26 @@ export default function EnvironmentalMonitoring() {
 
   const acknowledgeAlert = (id: number) => {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a))
+    // Report to Convex backend
+    updateDeviceFields({
+      deviceId: DEVICE_IDS.ENV_MONITORING,
+      fields: {
+        lastAcknowledgedAlert: id,
+        lastAction: 'acknowledge_alert'
+      }
+    })
   }
 
   const dismissAlert = (id: number) => {
     setAlerts(prev => prev.filter(a => a.id !== id))
+    // Report to Convex backend
+    updateDeviceFields({
+      deviceId: DEVICE_IDS.ENV_MONITORING,
+      fields: {
+        lastDismissedAlert: id,
+        lastAction: 'dismiss_alert'
+      }
+    })
   }
 
   const getStatusColor = (status: string) => {
@@ -636,7 +653,22 @@ export default function EnvironmentalMonitoring() {
                     Reset Defaults
                   </button>
                   <button
-                    onClick={() => setLastSaved(new Date())}
+                    onClick={() => {
+                      setLastSaved(new Date())
+                      // Report to Convex backend
+                      updateDeviceStatus({
+                        deviceId: DEVICE_IDS.ENV_MONITORING,
+                        status: 'ready',
+                        currentAction: 'Thresholds updated'
+                      })
+                      updateDeviceFields({
+                        deviceId: DEVICE_IDS.ENV_MONITORING,
+                        fields: {
+                          thresholds: thresholds,
+                          lastAction: 'save_thresholds'
+                        }
+                      })
+                    }}
                     data-testid="save-thresholds-btn"
                     className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded-md hover:bg-cyan-700 transition-colors"
                   >

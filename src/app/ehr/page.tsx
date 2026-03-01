@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
 
 interface Patient {
   mrn: string
@@ -145,6 +146,20 @@ export default function EHRSystem() {
           }
         : r
     ))
+    // Report to Convex backend
+    updateDeviceStatus({
+      deviceId: DEVICE_IDS.SCHEDULING,
+      status: newStatus === 'Ready' ? 'ready' : newStatus === 'Blocked' ? 'error' : 'configuring',
+      currentAction: `${roomId} set to ${newStatus}`
+    })
+    updateDeviceFields({
+      deviceId: DEVICE_IDS.SCHEDULING,
+      fields: {
+        lastUpdatedRoom: roomId,
+        lastRoomStatus: newStatus,
+        lastAction: 'status_change'
+      }
+    })
   }
 
   const menuItems = [

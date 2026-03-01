@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
 
 type BotStatus = 'IDLE' | 'EN_ROUTE' | 'ARRIVED' | 'RETURNING'
 
@@ -63,6 +64,20 @@ export default function TUGDashboard() {
       }
       return bot
     }))
+    // Report to Convex backend
+    updateDeviceStatus({
+      deviceId: DEVICE_IDS.TUG_ROBOT,
+      status: 'configuring',
+      currentAction: `Bot ${botId} deployed from ${source} to Sterilization`
+    })
+    updateDeviceFields({
+      deviceId: DEVICE_IDS.TUG_ROBOT,
+      fields: {
+        lastDeployedBot: botId,
+        lastSource: source,
+        lastAction: 'deploy'
+      }
+    })
   }
 
   const returnBot = (botId: string) => {
@@ -72,6 +87,19 @@ export default function TUGDashboard() {
       }
       return bot
     }))
+    // Report to Convex backend
+    updateDeviceStatus({
+      deviceId: DEVICE_IDS.TUG_ROBOT,
+      status: 'configuring',
+      currentAction: `Bot ${botId} returning to base`
+    })
+    updateDeviceFields({
+      deviceId: DEVICE_IDS.TUG_ROBOT,
+      fields: {
+        lastReturnedBot: botId,
+        lastAction: 'return'
+      }
+    })
   }
 
   const getStatusColor = (status: BotStatus) => {
