@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
 
 interface MetricData {
   id: string
@@ -78,25 +77,6 @@ export default function VariableTrackerDashboard() {
   const refreshMetrics = () => {
     const time = new Date().toLocaleTimeString('en-US', { hour12: false })
     setMetrics(prev => prev.map(m => ({ ...m, lastUpdated: time })))
-    // Report to Convex backend
-    const normalCount = metrics.filter(m => m.status === 'normal').length
-    const warningCount = metrics.filter(m => m.status === 'warning').length
-    const criticalCount = metrics.filter(m => m.status === 'critical').length
-    updateDeviceStatus({
-      deviceId: DEVICE_IDS.ENV_MONITORING,
-      status: criticalCount > 0 ? 'error' : warningCount > 0 ? 'configuring' : 'ready',
-      currentAction: `Monitoring ${metrics.length} variables`
-    })
-    updateDeviceFields({
-      deviceId: DEVICE_IDS.ENV_MONITORING,
-      fields: {
-        totalVariables: metrics.length,
-        normalCount,
-        warningCount,
-        criticalCount,
-        lastRefresh: time
-      }
-    })
   }
 
   return (
