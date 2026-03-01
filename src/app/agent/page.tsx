@@ -403,6 +403,43 @@ export default function AgentPage() {
     }
   }
 
+  // ─── Demo handler ──────────────────────────────────────────────
+
+  const handleDemo = async () => {
+    resetState()
+    setIsRunning(true)
+    setWatchActive(true)
+    setStatus('watching')
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const res = await fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ intervalMs: 8000 }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => '')
+        setError(`Demo failed: ${res.status} — ${errorBody || res.statusText}`)
+        setIsRunning(false)
+        setWatchActive(false)
+        return
+      }
+
+      await consumeStream(res)
+    } catch (e: unknown) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+      setIsRunning(false)
+      setWatchActive(false)
+    }
+  }
+
   // ─── Custom handler ───────────────────────────────────────────────
 
   const handleCustom = async () => {
@@ -778,6 +815,41 @@ export default function AgentPage() {
             {/* ── Watch Tab ──────────────────────────────────── */}
             {tab === 'watch' && (
               <div>
+                {/* Demo Mode Button */}
+                <div className="p-4 pb-2">
+                  <button
+                    onClick={handleDemo}
+                    disabled={isRunning}
+                    className="w-full px-4 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                  >
+                    {isRunning ? (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        Demo Running...
+                      </>
+                    ) : (
+                      'Launch Demo (All 4 Devices)'
+                    )}
+                  </button>
+                  {isRunning && (
+                    <button
+                      onClick={handleStop}
+                      className="w-full mt-2 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Stop Demo
+                    </button>
+                  )}
+                  <p className="text-xs text-slate-500 mt-2 text-center">
+                    Simulates all devices with changing data — no browser-use needed
+                  </p>
+                </div>
+
+                <div className="px-4 py-2">
+                  <div className="border-t border-slate-700 pt-2">
+                    <p className="text-xs text-slate-500 text-center mb-1">Or watch a specific route with browser-use:</p>
+                  </div>
+                </div>
+
                 <SiteRouteSelector
                   actionLabel={watchActive ? 'Watching...' : 'Start Watch'}
                   onAction={handleWatch}
