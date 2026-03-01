@@ -7,7 +7,7 @@ export const getRoomState = internalQuery({
   },
   handler: async (ctx, args) => {
     const room = await ctx.db.get(args.roomId);
-    if (!room) throw new Error("Room not found");
+    if (!room) return null;
 
     const devices = await ctx.db
       .query("devices")
