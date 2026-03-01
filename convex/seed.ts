@@ -26,7 +26,7 @@ export const init = internalMutation({
 
     const now = Date.now();
 
-    // Insert 4 rooms: OR-1, OR-2, OR-4 as "ready" (no devices), OR-3 as "idle" (5 devices)
+    // Insert 4 rooms: OR-1, OR-2, OR-4 as "ready" (no devices), OR-3 as "idle" (2 devices)
     const or1 = await ctx.db.insert("rooms", {
       name: "OR-1",
       status: "ready",
@@ -44,7 +44,7 @@ export const init = internalMutation({
     const or3 = await ctx.db.insert("rooms", {
       name: "OR-3",
       status: "idle",
-      deviceCount: 5,
+      deviceCount: 2,
       devicesReady: 0,
       updatedAt: now,
     });
@@ -56,13 +56,15 @@ export const init = internalMutation({
       updatedAt: now,
     });
 
-    // Insert 5 devices for OR-3 with fieldSchema so agents know what to extract
+    // Insert 2 devices for OR-3 with fieldSchema so agents know what to extract
     const devices = [
       {
         name: "UV Robot",
         category: "sterilization",
-        url: "http://localhost:3001",
+        url: "http://localhost:3000/uv-robot",
         fields: {
+          deviceId: "UVC-2019-4721",
+          connectionStatus: "Online",
           targetRoom: "OR-3",
           cycleMode: "Standard",
           intensity: 85,
@@ -74,6 +76,8 @@ export const init = internalMutation({
           cycleCount: 4,
         },
         fieldSchema: {
+          deviceId: { type: "string", label: "Device ID", readOnly: true },
+          connectionStatus: { type: "string", label: "Connection Status", readOnly: true },
           targetRoom: { type: "string", label: "Target Room", control: "dropdown" },
           cycleMode: { type: "string", label: "Cycle Mode", control: "radio", options: ["Standard", "High", "Terminal"] },
           intensity: { type: "number", label: "UV-C Intensity", control: "slider", min: 0, max: 100, unit: "%" },
@@ -86,55 +90,34 @@ export const init = internalMutation({
         },
       },
       {
-        name: "Env Monitoring",
-        category: "monitoring",
-        url: "http://localhost:3002",
-        fields: {},
-        fieldSchema: {
-          temperature: { type: "number", label: "Temperature", readOnly: true, unit: "°C" },
-          humidity: { type: "number", label: "Humidity", readOnly: true, unit: "%" },
-          co2: { type: "number", label: "CO2", readOnly: true, unit: "ppm" },
-          particulateCount: { type: "number", label: "Particulate Count", readOnly: true },
-          airPressure: { type: "number", label: "Air Pressure", readOnly: true, unit: "Pa" },
-          status: { type: "string", label: "Status", readOnly: true },
+        name: "TUG Fleet Monitor",
+        category: "transport",
+        url: "http://localhost:3000/tug-fleet",
+        fields: {
+          activeUnits: "0 / 4",
+          enRouteCount: 0,
+          arrivedCount: 0,
+          returningCount: 0,
+          idleCount: 4,
+          todaysTrips: 47,
+          avgTransitTime: "3:42",
+          onTimeRate: 98.2,
+          itemsTransported: 156,
+          fleetUptime: 99.9,
         },
-      },
-      {
-        name: "Sterilizer",
-        category: "sterilization",
-        url: "http://localhost:3003",
-        fields: {},
         fieldSchema: {
-          cycleType: { type: "string", label: "Cycle Type", control: "dropdown" },
-          temperature: { type: "number", label: "Temperature", readOnly: true, unit: "°C" },
-          pressure: { type: "number", label: "Pressure", readOnly: true, unit: "PSI" },
-          cycleProgress: { type: "number", label: "Cycle Progress", readOnly: true, unit: "%" },
-          status: { type: "string", label: "Status", readOnly: true },
-        },
-      },
-      {
-        name: "Scheduling",
-        category: "scheduling",
-        url: "http://localhost:3004",
-        fields: {},
-        fieldSchema: {
-          nextCase: { type: "string", label: "Next Case", readOnly: true },
-          surgeon: { type: "string", label: "Surgeon", readOnly: true },
-          procedure: { type: "string", label: "Procedure", readOnly: true },
-          scheduledTime: { type: "string", label: "Scheduled Time", readOnly: true },
-          turnaroundStatus: { type: "string", label: "Turnaround Status", readOnly: true },
-        },
-      },
-      {
-        name: "Surveillance",
-        category: "monitoring",
-        url: "http://localhost:3005",
-        fields: {},
-        fieldSchema: {
-          occupancy: { type: "string", label: "Room Occupancy", readOnly: true },
-          personnelCount: { type: "number", label: "Personnel Count", readOnly: true },
-          lastMotionDetected: { type: "string", label: "Last Motion", readOnly: true },
-          status: { type: "string", label: "Status", readOnly: true },
+          activeUnits: { type: "string", label: "Active Units", readOnly: true },
+          enRouteCount: { type: "number", label: "EN_ROUTE", readOnly: true },
+          arrivedCount: { type: "number", label: "ARRIVED", readOnly: true },
+          returningCount: { type: "number", label: "RETURNING", readOnly: true },
+          idleCount: { type: "number", label: "IDLE", readOnly: true },
+          todaysTrips: { type: "number", label: "Today's Trips", readOnly: true },
+          avgTransitTime: { type: "string", label: "Avg Transit Time", readOnly: true },
+          onTimeRate: { type: "number", label: "On-Time Rate", readOnly: true, unit: "%" },
+          itemsTransported: { type: "number", label: "Items Transported", readOnly: true },
+          fleetUptime: { type: "number", label: "Fleet Uptime", readOnly: true, unit: "%" },
+          // Per-unit data (agent can populate as nested objects)
+          units: { type: "object", label: "Fleet Units", readOnly: true },
         },
       },
     ];
@@ -154,7 +137,7 @@ export const init = internalMutation({
 
     console.log("Seed data inserted:", {
       rooms: { "OR-1": or1, "OR-2": or2, "OR-3": or3, "OR-4": or4 },
-      devices: "5 devices for OR-3",
+      devices: "2 devices for OR-3",
     });
   },
 });
