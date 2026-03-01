@@ -12,7 +12,7 @@
 set -euo pipefail
 
 BASE_URL="https://impartial-whale-32.convex.site"
-ROOM_ID="jn7bw19xt7a818kvh3w5dhxvvd823j8a"
+ROOM_ID="jn7ejjf7fv8pnq8vrp4qn79xwd8238x8"
 
 # ── TIMING (edit to match your recorded videos) ─────────────────────────────
 PHASE1_DURATION=24      # TUG deploy — 2s buffer + 20s video + 2s buffer

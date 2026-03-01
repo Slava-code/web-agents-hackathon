@@ -2,18 +2,18 @@ const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://impa
 
 // Device IDs from the impartial-whale-32 deployment (OR-3 devices)
 export const DEVICE_IDS = {
-  UV_ROBOT: 'jd71dxprgfe2c1m191bt6a79g98225x2',
-  TUG_ROBOT: 'jd70sm9tht7kq7p0t20n22ptrn822tn5',
-  ENV_MONITORING: 'jd79481zr4jt3pggjebcf7y2nn823cp5',
-  SCHEDULING: 'jd7d79sep5x1q0hmetevhmcnbx8231js',
+  UV_ROBOT: 'jd710yedg9y0jjceyermx7qcbs822r2t',
+  TUG_ROBOT: 'jd7ccfh8ngy32dr8yq53kmbc9x822pp2',
+  ENV_MONITORING: 'jd795pyyc96w6y2mp6rm7g4y5h8222n6',
+  SCHEDULING: 'jd708khpf32tx1wek415dsjefx822zha',
 } as const
 
 // Room IDs from the impartial-whale-32 deployment
 export const ROOM_IDS = {
-  OR_1: 'jn77dth55k7d2600v9hx3dbk4s822646',
-  OR_2: 'jn78nfx1s528tz8cknq4c8g44d823yvv',
-  OR_3: 'jn7bw19xt7a818kvh3w5dhxvvd823j8a',
-  OR_4: 'jn7caae78h5qg7pthmzav3yx4n8224ee',
+  OR_1: 'jn761zbp8x7sqz9k4c19n1c3wx822dkh',
+  OR_2: 'jn76k8vm6z93n90wrf9f8bb74x8226z3',
+  OR_3: 'jn7ejjf7fv8pnq8vrp4qn79xwd8238x8',
+  OR_4: 'jn7cgfefkep7zmw3bzeh2kg33n823ztx',
 } as const
 
 export type DeviceStatus = 'idle' | 'configuring' | 'ready' | 'error'
