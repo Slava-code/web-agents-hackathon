@@ -93,7 +93,7 @@ _log_header "PHASE 0: Discover seed data"
 echo "  Fetching rooms via 'npx convex run rooms:list' ..."
 ROOMS_JSON=$(convex_run "rooms:list")
 
-# Find OR-3 room ID (the room with 5 devices)
+# Find OR-3 room ID (the room with 2 devices)
 ROOM_ID=$(echo "$ROOMS_JSON" | jq -r '.[] | select(.name == "OR-3") | ._id')
 if [ -z "$ROOM_ID" ] || [ "$ROOM_ID" = "null" ]; then
   echo "FATAL: Could not find room OR-3. Is seed data loaded?"
@@ -115,19 +115,13 @@ fi
 
 # Extract individual device IDs by name for targeted tests
 DEV_UV_ROBOT=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "UV Robot") | ._id')
-DEV_ENV_MON=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "Env Monitoring") | ._id')
-DEV_STERILIZER=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "Sterilizer") | ._id')
-DEV_SCHEDULING=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "Scheduling") | ._id')
-DEV_SURVEILLANCE=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "Surveillance") | ._id')
+DEV_TUG_FLEET=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | ._id')
 
-echo "  UV Robot      = $DEV_UV_ROBOT"
-echo "  Env Monitoring = $DEV_ENV_MON"
-echo "  Sterilizer    = $DEV_STERILIZER"
-echo "  Scheduling    = $DEV_SCHEDULING"
-echo "  Surveillance  = $DEV_SURVEILLANCE"
+echo "  UV Robot          = $DEV_UV_ROBOT"
+echo "  TUG Fleet Monitor = $DEV_TUG_FLEET"
 
 # Build an array for iteration
-ALL_DEVICE_IDS=("$DEV_UV_ROBOT" "$DEV_ENV_MON" "$DEV_STERILIZER" "$DEV_SCHEDULING" "$DEV_SURVEILLANCE")
+ALL_DEVICE_IDS=("$DEV_UV_ROBOT" "$DEV_TUG_FLEET")
 
 ###############################################################################
 # CLEANUP helper — reset all devices to idle and room to idle
@@ -165,10 +159,10 @@ fi
 # Test 1.2: room-state includes devices array
 _log_test "GET /room-state includes devices array with correct count"
 DEV_LEN=$(echo "$RESP" | jq '.devices | length')
-if [ "$DEV_LEN" -eq 5 ]; then
-  _pass "devices array has 5 entries"
+if [ "$DEV_LEN" -eq 2 ]; then
+  _pass "devices array has 2 entries"
 else
-  _fail "devices array length wrong" "expected 5, got $DEV_LEN"
+  _fail "devices array length wrong" "expected 2, got $DEV_LEN"
 fi
 
 # Test 1.3: room-state includes environmentReadings (even if empty)
@@ -180,7 +174,7 @@ else
   _fail "environmentReadings key missing" "response: $RESP"
 fi
 
-# Test 1.4: missing roomId → 400
+# Test 1.4: missing roomId -> 400
 _log_test "GET /room-state without roomId returns 400 error"
 RESP_ERR=$(http_get "${SITE_URL}/room-state")
 ERR_MSG=$(echo "$RESP_ERR" | jq -r '.error // empty')
@@ -228,7 +222,7 @@ else
 fi
 settle
 
-# Test 2.3: missing fields → 400
+# Test 2.3: missing fields -> 400
 _log_test "POST /device-update with missing status returns error"
 RESP=$(http_post "/device-update" "{\"deviceId\":\"$DEV_UV_ROBOT\"}")
 ERR=$(echo "$RESP" | jq -r '.error // empty')
@@ -246,7 +240,7 @@ _log_header "SECTION 3: POST /field-update"
 
 # Test 3.1: Set new fields on a device
 _log_test "POST /field-update sets new fields"
-RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_ENV_MON\",\"fields\":{\"temperature\":22.5,\"humidity\":45}}")
+RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"fields\":{\"temperature\":22.5,\"humidity\":45}}")
 OK=$(echo "$RESP" | jq -r '.ok')
 if [ "$OK" = "true" ]; then
   _pass "field-update ok=true"
@@ -258,8 +252,8 @@ settle
 
 # Verify fields via room-state
 RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
-TEMP=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Env Monitoring") | .fields.temperature')
-HUMID=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Env Monitoring") | .fields.humidity')
+TEMP=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .fields.temperature')
+HUMID=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .fields.humidity')
 if [ "$TEMP" = "22.5" ] && [ "$HUMID" = "45" ]; then
   _pass "Fields set correctly (temp=$TEMP, humidity=$HUMID)"
 else
@@ -268,7 +262,7 @@ fi
 
 # Test 3.2: Shallow merge — add a field without overwriting existing
 _log_test "POST /field-update merges fields (does not overwrite existing)"
-RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_ENV_MON\",\"fields\":{\"co2\":400}}")
+RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"fields\":{\"co2\":400}}")
 OK=$(echo "$RESP" | jq -r '.ok')
 if [ "$OK" = "true" ]; then
   _pass "Merge field-update ok=true"
@@ -280,8 +274,8 @@ settle
 
 # Check all three fields present
 RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
-TEMP2=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Env Monitoring") | .fields.temperature')
-CO2=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Env Monitoring") | .fields.co2')
+TEMP2=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .fields.temperature')
+CO2=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .fields.co2')
 if [ "$TEMP2" = "22.5" ] && [ "$CO2" = "400" ]; then
   _pass "Merge preserved temperature ($TEMP2) and added co2 ($CO2)"
 else
@@ -290,20 +284,20 @@ fi
 
 # Test 3.3: Overwrite an existing field
 _log_test "POST /field-update can overwrite an existing field"
-RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_ENV_MON\",\"fields\":{\"temperature\":25.0}}")
+RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"fields\":{\"temperature\":25.0}}")
 OK=$(echo "$RESP" | jq -r '.ok')
 settle
 RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
-TEMP3=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Env Monitoring") | .fields.temperature')
+TEMP3=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .fields.temperature')
 if [ "$TEMP3" = "25" ]; then
   _pass "Temperature overwritten to 25"
 else
   _fail "Temperature overwrite failed" "expected 25, got $TEMP3"
 fi
 
-# Test 3.4: missing fields → error
+# Test 3.4: missing fields -> error
 _log_test "POST /field-update with missing fields returns error"
-RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_ENV_MON\"}")
+RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_TUG_FLEET\"}")
 ERR=$(echo "$RESP" | jq -r '.error // empty')
 if [ -n "$ERR" ]; then
   _pass "Error returned for missing fields"
@@ -337,18 +331,18 @@ else
   _fail "rooms:get name wrong" "expected OR-3, got $RNAME"
 fi
 
-# Test 4.3: devices:listByRoom returns 5 devices
-_log_test "devices:listByRoom returns 5 devices for OR-3"
+# Test 4.3: devices:listByRoom returns 2 devices
+_log_test "devices:listByRoom returns 2 devices for OR-3"
 DEVS=$(convex_run "devices:listByRoom" "{\"roomId\":\"$ROOM_ID\"}")
 DCOUNT=$(echo "$DEVS" | jq 'length')
-if [ "$DCOUNT" -eq 5 ]; then
+if [ "$DCOUNT" -eq 2 ]; then
   _pass "devices:listByRoom returned $DCOUNT devices"
 else
-  _fail "devices:listByRoom count wrong" "expected 5, got $DCOUNT"
+  _fail "devices:listByRoom count wrong" "expected 2, got $DCOUNT"
 fi
 
 ###############################################################################
-# SECTION 5 — Full aggregation flow: submit command → all devices ready →
+# SECTION 5 — Full aggregation flow: submit command -> all devices ready ->
 #              room ready, command completed with elapsedMs
 ###############################################################################
 
@@ -387,8 +381,8 @@ else
   _fail "Room status not preparing" "got '$RSTATUS'"
 fi
 
-if [ "$CONFIGURING_COUNT" -eq 5 ]; then
-  _pass "All 5 devices are 'configuring'"
+if [ "$CONFIGURING_COUNT" -eq 2 ]; then
+  _pass "All 2 devices are 'configuring'"
 else
   _fail "Not all devices configuring" "configuring count = $CONFIGURING_COUNT"
 fi
@@ -403,34 +397,31 @@ else
   _fail "Command status not running" "got '$CMD_STATUS'"
 fi
 
-# 5.4: Send device-update "ready" for first 4 devices, one by one
-_log_test "Sending ready for 4/5 devices — room should NOT be ready yet"
-for i in 0 1 2 3; do
-  did="${ALL_DEVICE_IDS[$i]}"
-  http_post "/device-update" "{\"deviceId\":\"$did\",\"status\":\"ready\"}" >/dev/null
-done
+# 5.4: Send device-update "ready" for first device — room should NOT be ready yet
+_log_test "Sending ready for 1/2 devices — room should NOT be ready yet"
+http_post "/device-update" "{\"deviceId\":\"${ALL_DEVICE_IDS[0]}\",\"status\":\"ready\"}" >/dev/null
 settle
 
 RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
 RSTATUS=$(echo "$RESP" | jq -r '.room.status')
 READY_COUNT=$(echo "$RESP" | jq '.room.devicesReady')
 
-if [ "$READY_COUNT" -eq 4 ]; then
-  _pass "devicesReady = 4"
+if [ "$READY_COUNT" -eq 1 ]; then
+  _pass "devicesReady = 1"
 else
-  _fail "devicesReady wrong" "expected 4, got $READY_COUNT"
+  _fail "devicesReady wrong" "expected 1, got $READY_COUNT"
 fi
 
 # Room should still be preparing (not all ready yet)
 if [ "$RSTATUS" = "preparing" ]; then
-  _pass "Room still 'preparing' with 4/5 devices ready"
+  _pass "Room still 'preparing' with 1/2 devices ready"
 else
-  _fail "Room status unexpected with 4/5 ready" "got '$RSTATUS'"
+  _fail "Room status unexpected with 1/2 ready" "got '$RSTATUS'"
 fi
 
-# 5.5: Send the last device ready → room should become "ready" and command "completed"
+# 5.5: Send the last device ready -> room should become "ready" and command "completed"
 _log_test "Sending last device ready — room should go 'ready', command 'completed' with elapsedMs"
-http_post "/device-update" "{\"deviceId\":\"${ALL_DEVICE_IDS[4]}\",\"status\":\"ready\"}" >/dev/null
+http_post "/device-update" "{\"deviceId\":\"${ALL_DEVICE_IDS[1]}\",\"status\":\"ready\"}" >/dev/null
 settle
 
 RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
@@ -443,10 +434,10 @@ else
   _fail "Room status not ready" "got '$RSTATUS'"
 fi
 
-if [ "$READY_COUNT" -eq 5 ]; then
-  _pass "devicesReady = 5"
+if [ "$READY_COUNT" -eq 2 ]; then
+  _pass "devicesReady = 2"
 else
-  _fail "devicesReady wrong" "expected 5, got $READY_COUNT"
+  _fail "devicesReady wrong" "expected 2, got $READY_COUNT"
 fi
 
 # 5.6: Command should now be completed with elapsedMs
@@ -468,10 +459,10 @@ else
 fi
 
 ###############################################################################
-# SECTION 6 — Error handling: device error → room needs_attention
+# SECTION 6 — Error handling: device error -> room needs_attention
 ###############################################################################
 
-_log_header "SECTION 6: Error handling (device error → needs_attention)"
+_log_header "SECTION 6: Error handling (device error -> needs_attention)"
 
 # Reset all devices to idle first
 echo "  Resetting all devices to idle..."
@@ -486,8 +477,8 @@ CMD_ID2=$(convex_run "commands:submit" "{\"text\":\"Error test command\",\"roomI
 CMD_ID2=$(echo "$CMD_ID2" | jq -r '.')
 settle
 
-# 6.2: Send error for one device
-RESP=$(http_post "/device-update" "{\"deviceId\":\"$DEV_STERILIZER\",\"status\":\"error\",\"lastError\":\"Test error: sensor offline\"}")
+# 6.2: Send error for one device (TUG Fleet Monitor)
+RESP=$(http_post "/device-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"status\":\"error\",\"lastError\":\"Test error: sensor offline\"}")
 OK=$(echo "$RESP" | jq -r '.ok')
 if [ "$OK" = "true" ]; then
   _pass "Error device-update accepted"
@@ -509,19 +500,19 @@ fi
 
 # 6.4: Verify the errored device has lastError set
 _log_test "Errored device has status=error and lastError set"
-STER_STATUS=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Sterilizer") | .status')
-STER_ERROR=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Sterilizer") | .lastError')
+TUG_STATUS=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .status')
+TUG_ERROR=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .lastError')
 
-if [ "$STER_STATUS" = "error" ]; then
-  _pass "Sterilizer status is 'error'"
+if [ "$TUG_STATUS" = "error" ]; then
+  _pass "TUG Fleet Monitor status is 'error'"
 else
-  _fail "Sterilizer status wrong" "expected 'error', got '$STER_STATUS'"
+  _fail "TUG Fleet Monitor status wrong" "expected 'error', got '$TUG_STATUS'"
 fi
 
-if [ "$STER_ERROR" = "Test error: sensor offline" ]; then
-  _pass "Sterilizer lastError = 'Test error: sensor offline'"
+if [ "$TUG_ERROR" = "Test error: sensor offline" ]; then
+  _pass "TUG Fleet Monitor lastError = 'Test error: sensor offline'"
 else
-  _fail "Sterilizer lastError wrong" "got '$STER_ERROR'"
+  _fail "TUG Fleet Monitor lastError wrong" "got '$TUG_ERROR'"
 fi
 
 ###############################################################################
@@ -611,7 +602,7 @@ fi
 
 # 9.2: field-update with empty fields object
 _log_test "POST /field-update with empty fields object succeeds (no-op merge)"
-RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_SCHEDULING\",\"fields\":{}}")
+RESP=$(http_post "/field-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"fields\":{}}")
 OK=$(echo "$RESP" | jq -r '.ok')
 if [ "$OK" = "true" ]; then
   _pass "Empty fields merge ok=true"
@@ -621,19 +612,19 @@ fi
 
 # 9.3: device-update with currentAction field
 _log_test "POST /device-update can set currentAction"
-RESP=$(http_post "/device-update" "{\"deviceId\":\"$DEV_SURVEILLANCE\",\"status\":\"configuring\",\"currentAction\":\"Scanning perimeter\"}")
+RESP=$(http_post "/device-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"status\":\"configuring\",\"currentAction\":\"Scanning perimeter\"}")
 OK=$(echo "$RESP" | jq -r '.ok')
 settle
 RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
-CA=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Surveillance") | .currentAction')
+CA=$(echo "$RESP" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | .currentAction')
 if [ "$CA" = "Scanning perimeter" ]; then
   _pass "currentAction set to 'Scanning perimeter'"
 else
   _fail "currentAction wrong" "got '$CA'"
 fi
 
-# Reset surveillance back to idle
-http_post "/device-update" "{\"deviceId\":\"$DEV_SURVEILLANCE\",\"status\":\"idle\"}" >/dev/null
+# Reset TUG Fleet Monitor back to idle
+http_post "/device-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"status\":\"idle\"}" >/dev/null
 
 ###############################################################################
 # Summary
