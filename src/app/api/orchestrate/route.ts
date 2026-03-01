@@ -235,8 +235,15 @@ export async function POST(req: NextRequest) {
             let sessionId = "";
             let liveUrl: string | null = null;
 
+            // Rewrite localhost URLs to public base URL for cloud BrowserUse
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+            const instructions = task.input.instructions.replace(
+              /http:\/\/localhost:3000/g,
+              baseUrl,
+            );
+
             const sessionResult = await runBrowserUseTask(
-              task.input.instructions,
+              instructions,
               apiKey,
               {
                 model: "bu-mini",

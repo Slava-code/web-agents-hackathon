@@ -185,7 +185,7 @@ export const createPrepareRoomScenario = internalMutation({
         deviceId: tugDevice._id,
         deviceUrl: tugDevice.url,
         scenarioType: "prepare_room",
-        instructions: `Navigate to ${tugDevice.url}. Find the TUG bot named 'Alpha' with status 'IDLE'. Click the 'Deploy to Sterilization' button next to it. Wait until the bot status changes from IDLE to EN_ROUTE.`,
+        instructions: `Navigate to ${tugDevice.url}. This is a TUG Fleet Monitor dashboard showing 4 robot bots in a table. Find the row for bot 'TUG-01' named 'Alpha'. Its status should show 'IDLE'. In that row, click the green button labeled 'Deploy to Sterilization' (data-testid: deploy-btn-TUG-01). After clicking, the bot's status badge (data-testid: bot-status-TUG-01) should change from 'IDLE' to 'EN_ROUTE'. Wait until you see the status text change, then report success.`,
         expectedOutput: {
           deployed: "boolean",
           botName: "Alpha",
@@ -206,7 +206,7 @@ export const createPrepareRoomScenario = internalMutation({
         deviceId: uvDevice._id,
         deviceUrl: uvDevice.url,
         scenarioType: "prepare_room",
-        instructions: `Navigate to ${uvDevice.url}. Click on the room dropdown labeled 'Target Room' and select 'OR-3'. Click the 'standard' cycle mode radio button. Click the 'Start Cycle' button. Wait until the progress reaches 100% and status shows 'complete'.`,
+        instructions: `Navigate to ${uvDevice.url}. This is a UV-C Disinfection System control panel. Step 1: Find the 'Target Room' dropdown (data-testid: room-selector) and select 'OR-3'. Step 2: Find the cycle mode radio buttons and click the one labeled 'standard' (data-testid: mode-standard). Step 3: Click the black 'Start Cycle' button (data-testid: start-cycle-btn). Step 4: Watch the large progress number (data-testid: progress-value) in the center of the page. It will count from 0 to 100. Wait until the status text (data-testid: cycle-status) below the number changes to 'complete'. Then report success.`,
         expectedOutput: {
           sterilized: "boolean",
           mode: "standard",
