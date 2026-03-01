@@ -22,15 +22,26 @@ interface SavedSite {
   routes: SiteRoute[]
 }
 
+interface DiffData {
+  changed: Record<string, { old: unknown; new: unknown }>
+  added: Record<string, unknown>
+  removed: string[]
+  hasChanges?: boolean
+}
+
 type EventData =
   | { type: 'session'; id: string; status: string; liveUrl: string | null; route?: string }
   | { type: 'status'; status: string; output: string | null; cost: string | null }
-  | { type: 'done'; status: string; output: string | null; cost: string | null; inputTokens?: number; outputTokens?: number }
+  | { type: 'done'; status: string; output: string | null; cost: string | null; inputTokens?: number; outputTokens?: number; summary?: Record<string, unknown> }
   | { type: 'error'; message: string }
   | { type: 'learning'; route: string; status: string; error?: string; rawOutput?: string }
   | { type: 'learned'; route: string; pagePurpose: string; fieldCount: number; fields: unknown[]; cost: string }
+  | { type: 'previous_snapshot'; data: Record<string, unknown> | null }
+  | { type: 'scrape_result'; data: Record<string, unknown>; cost: string }
+  | { type: 'diff'; diff: DiffData; hasChanges: boolean; isFirstRun?: boolean }
+  | { type: 'convex'; ok: boolean; deviceId: string; deviceName: string; fieldsSent: number; error?: string; message?: string }
 
-type Tab = 'learn' | 'scrape' | 'custom'
+type Tab = 'learn' | 'scrape' | 'monitor' | 'custom'
 
 // ─── Component ───────────────────────────────────────────────────────
 
@@ -51,10 +62,16 @@ export default function AgentPage() {
   const [learnBaseUrl, setLearnBaseUrl] = useState('')
   const [learnRoutes, setLearnRoutes] = useState('/uv-robot\n/environmental\n/sterilizer\n/ehr\n/camera')
 
-  // Scrape state
+  // Scrape + Monitor state (shared site/route selectors)
   const [savedSites, setSavedSites] = useState<SavedSite[]>([])
   const [selectedSiteId, setSelectedSiteId] = useState('')
   const [selectedRoute, setSelectedRoute] = useState('')
+
+  // Monitor-specific state
+  const [monitorDiff, setMonitorDiff] = useState<DiffData | null>(null)
+  const [monitorConvex, setMonitorConvex] = useState<{ ok: boolean; deviceName: string; fieldsSent: number; error?: string; message?: string } | null>(null)
+  const [monitorPrevSnapshot, setMonitorPrevSnapshot] = useState<Record<string, unknown> | null | undefined>(undefined)
+  const [monitorIsFirstRun, setMonitorIsFirstRun] = useState(false)
 
   // Custom state
   const [customTask, setCustomTask] = useState('')
@@ -84,6 +101,10 @@ export default function AgentPage() {
     setCost(null)
     setStatus('idle')
     setError(null)
+    setMonitorDiff(null)
+    setMonitorConvex(null)
+    setMonitorPrevSnapshot(undefined)
+    setMonitorIsFirstRun(false)
   }
 
   // ─── SSE stream consumer ──────────────────────────────────────────
@@ -127,6 +148,22 @@ export default function AgentPage() {
             setCost((prev) => {
               const prevNum = parseFloat(prev || '0')
               return (prevNum + parseFloat(data.cost || '0')).toFixed(6)
+            })
+          } else if (data.type === 'previous_snapshot') {
+            setMonitorPrevSnapshot(data.data)
+          } else if (data.type === 'scrape_result') {
+            setOutput(JSON.stringify(data.data, null, 2))
+            if (data.cost) setCost(data.cost)
+          } else if (data.type === 'diff') {
+            setMonitorDiff(data.diff)
+            setMonitorIsFirstRun(data.isFirstRun || false)
+          } else if (data.type === 'convex') {
+            setMonitorConvex({
+              ok: data.ok,
+              deviceName: data.deviceName,
+              fieldsSent: data.fieldsSent,
+              error: data.error,
+              message: data.message,
             })
           }
         } catch { /* skip */ }
@@ -174,7 +211,7 @@ export default function AgentPage() {
       }
 
       await consumeStream(res)
-      await loadSites() // refresh saved sites
+      await loadSites()
     } catch (e: unknown) {
       if (!(e instanceof DOMException && e.name === 'AbortError')) {
         setError(e instanceof Error ? e.message : String(e))
@@ -200,6 +237,44 @@ export default function AgentPage() {
 
     try {
       const res = await fetch('/api/browser-use', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siteId: selectedSiteId, route: selectedRoute }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        setError(`Request failed: ${res.status}`)
+        setIsRunning(false)
+        return
+      }
+
+      await consumeStream(res)
+    } catch (e: unknown) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+      setIsRunning(false)
+    }
+  }
+
+  // ─── Monitor handler ──────────────────────────────────────────────
+
+  const handleMonitor = async () => {
+    if (!selectedSiteId || !selectedRoute) {
+      setError('Select a saved site and route')
+      return
+    }
+
+    resetState()
+    setIsRunning(true)
+    setStatus('monitoring')
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const res = await fetch('/api/monitor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ siteId: selectedSiteId, route: selectedRoute }),
@@ -280,12 +355,88 @@ export default function AgentPage() {
     idle: 'bg-slate-500',
     starting: 'bg-yellow-500 animate-pulse',
     learning: 'bg-purple-500 animate-pulse',
+    monitoring: 'bg-amber-500 animate-pulse',
     created: 'bg-yellow-500 animate-pulse',
     running: 'bg-blue-500 animate-pulse',
     complete: 'bg-green-500',
     stopped: 'bg-orange-500',
     error: 'bg-red-500',
   }
+
+  // ─── Shared site/route selector ────────────────────────────────────
+
+  const SiteRouteSelector = ({ actionLabel, onAction, buttonColor = 'bg-blue-600 hover:bg-blue-500' }: {
+    actionLabel: string
+    onAction: () => void
+    buttonColor?: string
+  }) => (
+    <div className="p-4 space-y-3">
+      {savedSites.length === 0 ? (
+        <div className="text-center text-slate-500 py-8">
+          <p className="text-sm">No saved sites yet.</p>
+          <p className="text-xs mt-1">Switch to the Learn tab to teach the agent about a site.</p>
+        </div>
+      ) : (
+        <>
+          <div>
+            <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+              Saved Site
+            </label>
+            <select
+              value={selectedSiteId}
+              onChange={(e) => {
+                setSelectedSiteId(e.target.value)
+                setSelectedRoute('')
+              }}
+              className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="">Select a site...</option>
+              {savedSites.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.hostname} ({s.routeCount} routes)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selectedSite && (
+            <div>
+              <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                Route
+              </label>
+              <select
+                value={selectedRoute}
+                onChange={(e) => setSelectedRoute(e.target.value)}
+                className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="">Select a route...</option>
+                {selectedSite.routes.map((r) => (
+                  <option key={r.path} value={r.path}>
+                    {r.path} — {r.pagePurpose} ({r.fieldCount} fields)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={onAction}
+              disabled={isRunning || !selectedSiteId || !selectedRoute}
+              className={`flex-1 px-4 py-2 ${buttonColor} disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors`}
+            >
+              {isRunning ? 'Running...' : actionLabel}
+            </button>
+            {isRunning && (
+              <button onClick={handleStop} className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-medium transition-colors">
+                Stop
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
 
   // ─── Render ───────────────────────────────────────────────────────
 
@@ -334,11 +485,11 @@ export default function AgentPage() {
         <div className="w-[420px] border-l border-slate-700 flex flex-col overflow-hidden">
           {/* Tab Switcher */}
           <div className="flex border-b border-slate-700">
-            {(['learn', 'scrape', 'custom'] as Tab[]).map((t) => (
+            {(['learn', 'scrape', 'monitor', 'custom'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => { setTab(t); resetState() }}
-                className={`flex-1 px-4 py-3 text-sm font-medium capitalize transition-colors ${
+                className={`flex-1 px-3 py-3 text-sm font-medium capitalize transition-colors ${
                   tab === t
                     ? 'text-white border-b-2 border-blue-500 bg-slate-800/50'
                     : 'text-slate-400 hover:text-white'
@@ -431,70 +582,106 @@ export default function AgentPage() {
 
             {/* ── Scrape Tab ──────────────────────────────────── */}
             {tab === 'scrape' && (
-              <div className="p-4 space-y-3">
-                {savedSites.length === 0 ? (
-                  <div className="text-center text-slate-500 py-8">
-                    <p className="text-sm">No saved sites yet.</p>
-                    <p className="text-xs mt-1">Switch to the Learn tab to teach the agent about a site.</p>
-                  </div>
-                ) : (
-                  <>
-                    <div>
-                      <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                        Saved Site
-                      </label>
-                      <select
-                        value={selectedSiteId}
-                        onChange={(e) => {
-                          setSelectedSiteId(e.target.value)
-                          setSelectedRoute('')
-                        }}
-                        className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
-                      >
-                        <option value="">Select a site...</option>
-                        {savedSites.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.hostname} ({s.routeCount} routes)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+              <SiteRouteSelector
+                actionLabel="Extract Data"
+                onAction={handleScrape}
+              />
+            )}
 
-                    {selectedSite && (
-                      <div>
-                        <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                          Route
-                        </label>
-                        <select
-                          value={selectedRoute}
-                          onChange={(e) => setSelectedRoute(e.target.value)}
-                          className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-blue-500"
-                        >
-                          <option value="">Select a route...</option>
-                          {selectedSite.routes.map((r) => (
-                            <option key={r.path} value={r.path}>
-                              {r.path} — {r.pagePurpose} ({r.fieldCount} fields)
-                            </option>
-                          ))}
-                        </select>
+            {/* ── Monitor Tab ─────────────────────────────────── */}
+            {tab === 'monitor' && (
+              <div>
+                <SiteRouteSelector
+                  actionLabel="Monitor & Diff"
+                  onAction={handleMonitor}
+                  buttonColor="bg-amber-600 hover:bg-amber-500"
+                />
+
+                {/* Diff Results */}
+                {monitorDiff && (
+                  <div className="px-4 pb-3 space-y-2">
+                    <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                      {monitorIsFirstRun ? 'Initial Scan (no previous data)' : 'Changes Detected'}
+                    </h3>
+
+                    {!monitorDiff.hasChanges && !monitorIsFirstRun && (
+                      <div className="px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-slate-400">
+                        No changes detected
                       </div>
                     )}
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleScrape}
-                        disabled={isRunning || !selectedSiteId || !selectedRoute}
-                        className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-colors"
-                      >
-                        {isRunning ? 'Extracting...' : 'Extract Data'}
-                      </button>
-                      {isRunning && (
-                        <button onClick={handleStop} className="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-medium transition-colors">
-                          Stop
-                        </button>
-                      )}
+                    {/* Changed fields */}
+                    {Object.entries(monitorDiff.changed).length > 0 && (
+                      <div className="space-y-1">
+                        {Object.entries(monitorDiff.changed).map(([key, val]) => (
+                          <div key={key} className="px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-xs font-mono">
+                            <span className="text-yellow-400">{key}</span>
+                            <div className="text-slate-500 mt-0.5">
+                              <span className="text-red-400 line-through">{JSON.stringify(val.old)}</span>
+                              {' → '}
+                              <span className="text-green-400">{JSON.stringify(val.new)}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Added fields */}
+                    {Object.entries(monitorDiff.added).length > 0 && (
+                      <div className="space-y-1">
+                        {Object.entries(monitorDiff.added).map(([key, val]) => (
+                          <div key={key} className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg text-xs font-mono">
+                            <span className="text-green-400">+ {key}</span>
+                            <span className="text-slate-400 ml-2">{JSON.stringify(val)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Removed fields */}
+                    {monitorDiff.removed.length > 0 && (
+                      <div className="space-y-1">
+                        {monitorDiff.removed.map((key) => (
+                          <div key={key} className="px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs font-mono">
+                            <span className="text-red-400">- {key}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Convex Push Status */}
+                {monitorConvex && (
+                  <div className="px-4 pb-3">
+                    <div className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${
+                      monitorConvex.ok
+                        ? 'bg-green-500/10 border border-green-500/20 text-green-400'
+                        : 'bg-red-500/10 border border-red-500/20 text-red-400'
+                    }`}>
+                      <span>{monitorConvex.ok ? '\u2713' : '\u2717'}</span>
+                      <span>
+                        {monitorConvex.fieldsSent > 0
+                          ? `Pushed ${monitorConvex.fieldsSent} fields to Convex (${monitorConvex.deviceName})`
+                          : monitorConvex.message || (monitorConvex.ok ? 'No changes to push' : monitorConvex.error)
+                        }
+                      </span>
                     </div>
-                  </>
+                  </div>
+                )}
+
+                {/* Previous Snapshot (collapsible) */}
+                {monitorPrevSnapshot !== undefined && (
+                  <details className="px-4 pb-3">
+                    <summary className="text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-300">
+                      Previous Snapshot {monitorPrevSnapshot === null ? '(none)' : ''}
+                    </summary>
+                    {monitorPrevSnapshot && (
+                      <pre className="mt-2 text-xs bg-slate-800 border border-slate-600 rounded-lg p-3 overflow-auto max-h-[200px] whitespace-pre-wrap text-slate-400 font-mono">
+                        {JSON.stringify(monitorPrevSnapshot, null, 2)}
+                      </pre>
+                    )}
+                  </details>
                 )}
               </div>
             )}
@@ -547,9 +734,14 @@ export default function AgentPage() {
                     {events.map((ev, i) => (
                       <div key={i} className="text-xs font-mono px-2 py-1 rounded bg-slate-800 text-slate-300">
                         <span className="text-blue-400">[{ev.type}]</span>{' '}
-                        {ev.type === 'session' && `id=${ev.id.slice(0, 8)}…`}
+                        {ev.type === 'session' && `id=${ev.id.slice(0, 8)}...`}
                         {ev.type === 'status' && `status=${ev.status}`}
-                        {ev.type === 'done' && `cost=$${ev.cost}`}
+                        {ev.type === 'done' && (
+                          <span>
+                            cost=${ev.cost}
+                            {ev.summary && ` | ${(ev.summary as Record<string, unknown>).fieldsSent ?? 0} fields pushed`}
+                          </span>
+                        )}
                         {ev.type === 'error' && <span className="text-red-400">{ev.message}</span>}
                         {ev.type === 'learning' && (
                           <span>
@@ -560,6 +752,29 @@ export default function AgentPage() {
                         {ev.type === 'learned' && (
                           <span className="text-green-400">
                             {ev.route} — {ev.fieldCount} fields (${ev.cost})
+                          </span>
+                        )}
+                        {ev.type === 'diff' && (
+                          <span className={ev.hasChanges ? 'text-yellow-400' : 'text-slate-400'}>
+                            {ev.hasChanges
+                              ? `${Object.keys(ev.diff.changed).length} changed, ${Object.keys(ev.diff.added).length} added, ${ev.diff.removed.length} removed`
+                              : 'No changes'
+                            }
+                          </span>
+                        )}
+                        {ev.type === 'convex' && (
+                          <span className={ev.ok ? 'text-green-400' : 'text-red-400'}>
+                            {ev.ok ? `Pushed ${ev.fieldsSent} fields` : `Failed: ${ev.error || 'unknown'}`}
+                          </span>
+                        )}
+                        {ev.type === 'previous_snapshot' && (
+                          <span className="text-slate-400">
+                            {ev.data ? `${Object.keys(ev.data).length} fields from last scan` : 'No previous data (first run)'}
+                          </span>
+                        )}
+                        {ev.type === 'scrape_result' && (
+                          <span className="text-green-400">
+                            {Object.keys(ev.data).length} fields extracted
                           </span>
                         )}
                       </div>

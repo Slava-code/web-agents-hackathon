@@ -117,4 +117,19 @@ http.route({
   }),
 });
 
+// --- POST /seed ---
+
+http.route({
+  path: "/seed",
+  method: "POST",
+  handler: httpAction(async (ctx) => {
+    try {
+      await ctx.runMutation(internal.seed.init, {});
+      return jsonResponse({ ok: true, message: "Seed complete" });
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
 export default http;

@@ -1,62 +1,9 @@
 import { NextRequest } from "next/server";
-import { readdir, readFile } from "fs/promises";
-import { join } from "path";
+import { recallRoute, storeSnapshot } from "@/lib/supermemory";
+import { loadSiteConfig, buildMemoryPrompt } from "@/lib/site-config";
 
 const BU_API = "https://api.browser-use.com/api/v3";
 const POLL_INTERVAL_MS = 2000;
-const SITES_DIR = join(process.cwd(), "data", "sites");
-
-interface SiteField {
-  name: string;
-  selector: string;
-  sampleValue: string;
-  type: string;
-}
-
-interface SiteRoute {
-  path: string;
-  pagePurpose: string;
-  fields: SiteField[];
-}
-
-interface SiteConfig {
-  id: string;
-  baseUrl: string;
-  routes: SiteRoute[];
-}
-
-async function loadSiteConfig(siteId: string): Promise<SiteConfig | null> {
-  try {
-    const files = await readdir(SITES_DIR);
-    for (const file of files) {
-      if (!file.endsWith(".json")) continue;
-      const raw = await readFile(join(SITES_DIR, file), "utf-8");
-      const config = JSON.parse(raw);
-      if (config.id === siteId) return config;
-    }
-  } catch {
-    // no sites dir or read error
-  }
-  return null;
-}
-
-function buildMemoryPrompt(config: SiteConfig, routePath: string): string | null {
-  const route = config.routes.find((r) => r.path === routePath);
-  if (!route || route.fields.length === 0) return null;
-
-  const selectorLines = route.fields
-    .map((f) => `- "${f.name}" (${f.type}): ${f.selector}`)
-    .join("\n");
-
-  return `Go to ${config.baseUrl}${route.path}
-
-IMPORTANT: Do NOT create files. Do NOT save anything to disk. Just respond with JSON text.
-
-This page has these data fields with CSS selectors:
-${selectorLines}
-
-Read the current value of each field using the selectors. Your response must be EXACTLY a JSON object with field names as keys and current values as values. Nothing else before or after the JSON.`;
-}
 
 export async function POST(req: NextRequest) {
   const apiKey = process.env.BROWSER_USE_API_KEY;
@@ -68,14 +15,26 @@ export async function POST(req: NextRequest) {
   let task: string = body.task;
   const siteId: string | undefined = body.siteId;
   const routePath: string | undefined = body.route;
+  const containerId: string | undefined = body.containerId;
+
+  let hostname: string | undefined;
 
   // If siteId + route provided, build a memory-enhanced prompt
   if (siteId && routePath) {
     const config = await loadSiteConfig(siteId);
     if (config) {
+      hostname = config.baseUrl.replace(/^https?:\/\//, "").replace(/\/$/, "");
       const memoryTask = buildMemoryPrompt(config, routePath);
       if (memoryTask) {
         task = memoryTask;
+      }
+    }
+
+    // Fallback: try Supermemory if no local config or no fields found
+    if (!task && hostname) {
+      const memories = await recallRoute(hostname, routePath, containerId);
+      if (memories.length > 0) {
+        task = `Use this knowledge about the page to extract data:\n\n${memories[0].content}\n\nNavigate to the page and extract current values for all fields. Return ONLY valid JSON.`;
       }
     }
   }
@@ -172,6 +131,19 @@ export async function POST(req: NextRequest) {
               }
             }
 
+            // Store snapshot in Supermemory if we have structured data
+            let snapshotStored = false;
+            if (finalOutput && hostname && routePath) {
+              try {
+                const parsed = JSON.parse(finalOutput.trim().startsWith("{") ? finalOutput : "{}");
+                if (Object.keys(parsed).length > 0) {
+                  snapshotStored = await storeSnapshot(hostname, routePath, parsed, containerId);
+                }
+              } catch {
+                // not JSON, skip snapshot
+              }
+            }
+
             send({
               type: "done",
               status: state.status,
@@ -179,6 +151,7 @@ export async function POST(req: NextRequest) {
               cost: state.totalCostUsd,
               inputTokens: state.totalInputTokens,
               outputTokens: state.totalOutputTokens,
+              supermemory: snapshotStored,
             });
 
             // Stop the session to free resources

@@ -42,8 +42,8 @@ venv/
 __pycache__/
 *.pyc
 
-# learned site configs (runtime data)
-data/sites/*.json
+# local snapshots (runtime data)
+data/snapshots/*.json
 
 # local claude config
 CLAUDE.local.md

@@ -1,0 +1,258 @@
+{
+  "id": "f31a9309-a87d-4ce1-8a8a-1d4be4143dfe",
+  "hostname": "web-agents-hackathon.vercel.app",
+  "containerId": "test-hospital-1",
+  "baseUrl": "https://web-agents-hackathon.vercel.app",
+  "learnedAt": "2026-03-01T08:20:52.191Z",
+  "totalCost": "0.051851",
+  "routes": [
+    {
+      "path": "/ehr",
+      "pagePurpose": "Hospital EHR (Electronic Health Record) Surgical Services Dashboard for monitoring operating room status, checklists, and patient schedules.",
+      "pageLayout": "A header with hospital info, a horizontal list of room statuses, a main section with detailed current room status (OR-1), patient details for the next case, and a sidebar/list of the day's schedule.",
+      "fields": [
+        {
+          "name": "hospitalName",
+          "selector": "header h1.text-xl.font-bold",
+          "sampleValue": "Memorial General Hospital",
+          "type": "string"
+        },
+        {
+          "name": "unitName",
+          "selector": "header span:contains('Unit:')",
+          "sampleValue": "Main OR",
+          "type": "string"
+        },
+        {
+          "name": "userName",
+          "selector": "header span:contains('User:')",
+          "sampleValue": "ADMIN, Charge RN",
+          "type": "string"
+        },
+        {
+          "name": "filterShowReadyRooms",
+          "selector": "input[type='checkbox']:nth-of-type(1)",
+          "sampleValue": "true",
+          "type": "boolean"
+        },
+        {
+          "name": "filterShowTurnover",
+          "selector": "input[type='checkbox']:nth-of-type(2)",
+          "sampleValue": "true",
+          "type": "boolean"
+        },
+        {
+          "name": "filterShowOccupied",
+          "selector": "input[type='checkbox']:nth-of-type(3)",
+          "sampleValue": "true",
+          "type": "boolean"
+        },
+        {
+          "name": "roomStatus_OR-1",
+          "selector": "button:contains('OR-1')",
+          "sampleValue": "Turnover",
+          "type": "string"
+        },
+        {
+          "name": "roomStatus_OR-2",
+          "selector": "button:contains('OR-2')",
+          "sampleValue": "Occupied",
+          "type": "string"
+        },
+        {
+          "name": "roomStatus_OR-3",
+          "selector": "button:contains('OR-3')",
+          "sampleValue": "Ready",
+          "type": "string"
+        },
+        {
+          "name": "roomStatus_OR-4",
+          "selector": "button:contains('OR-4')",
+          "sampleValue": "Cleaning",
+          "type": "string"
+        },
+        {
+          "name": "roomStatus_PACU",
+          "selector": "button:contains('PACU')",
+          "sampleValue": "Occupied",
+          "type": "string"
+        },
+        {
+          "name": "activeRoomTitle",
+          "selector": "h2.text-2xl.font-bold",
+          "sampleValue": "Operating Room 1",
+          "type": "string"
+        },
+        {
+          "name": "activeRoomStatus",
+          "selector": ".bg-yellow-500",
+          "sampleValue": "Turnover",
+          "type": "string"
+        },
+        {
+          "name": "turnoverTime",
+          "selector": ".font-mono",
+          "sampleValue": "14:02",
+          "type": "string"
+        },
+        {
+          "name": "checklist_RoomCleaned",
+          "selector": "label:contains('Room Cleaned') input",
+          "sampleValue": "true",
+          "type": "boolean"
+        },
+        {
+          "name": "checklist_EquipmentStaged",
+          "selector": "label:contains('Equipment Staged') input",
+          "sampleValue": "true",
+          "type": "boolean"
+        },
+        {
+          "name": "checklist_InstrumentsVerified",
+          "selector": "label:contains('Instruments Verified') input",
+          "sampleValue": "false",
+          "type": "boolean"
+        },
+        {
+          "name": "checklist_AnesthesiaSetup",
+          "selector": "label:contains('Anesthesia Setup') input",
+          "sampleValue": "false",
+          "type": "boolean"
+        },
+        {
+          "name": "checklist_PatientReady",
+          "selector": "label:contains('Patient Ready') input",
+          "sampleValue": "false",
+          "type": "boolean"
+        },
+        {
+          "name": "patientName",
+          "selector": "h3.text-lg.font-bold",
+          "sampleValue": "Johnson, Robert M.",
+          "type": "string"
+        },
+        {
+          "name": "mrn",
+          "selector": "p:contains('MRN:')",
+          "sampleValue": "MRN-2024-00847",
+          "type": "string"
+        },
+        {
+          "name": "dob",
+          "selector": "p:contains('DOB:')",
+          "sampleValue": "03/15/1962",
+          "type": "string"
+        },
+        {
+          "name": "scheduledTime",
+          "selector": ".text-blue-600",
+          "sampleValue": "14:30",
+          "type": "string"
+        },
+        {
+          "name": "allergies",
+          "selector": ".bg-red-50 p",
+          "sampleValue": "Penicillin, Latex",
+          "type": "string"
+        },
+        {
+          "name": "procedure",
+          "selector": "p:contains('Procedure') + p",
+          "sampleValue": "Total Knee Arthroplasty, Left",
+          "type": "string"
+        },
+        {
+          "name": "surgeon",
+          "selector": "p:contains('Surgeon') + p",
+          "sampleValue": "Dr. Sarah Mitchell",
+          "type": "string"
+        },
+        {
+          "name": "duration",
+          "selector": "p:contains('Duration') + p",
+          "sampleValue": "2h 30m",
+          "type": "string"
+        },
+        {
+          "name": "anesthesia",
+          "selector": "p:contains('Anesthesia') + p",
+          "sampleValue": "Spinal w/ Sedation",
+          "type": "string"
+        },
+        {
+          "name": "notes",
+          "selector": "p:contains('Notes') + p",
+          "sampleValue": "Diabetic - insulin protocol required. MRSA precautions.",
+          "type": "string"
+        },
+        {
+          "name": "schedule_time_0",
+          "selector": "div:nth-of-type(1) .font-bold.text-gray-900",
+          "sampleValue": "13:00",
+          "type": "string"
+        },
+        {
+          "name": "schedule_patient_0",
+          "selector": "div:nth-of-type(1) .font-medium.text-gray-900",
+          "sampleValue": "Chen, David L.",
+          "type": "string"
+        },
+        {
+          "name": "schedule_status_0",
+          "selector": "div:nth-of-type(1) .uppercase",
+          "sampleValue": "IN PROGRESS",
+          "type": "string"
+        },
+        {
+          "name": "schedule_time_1",
+          "selector": "div:nth-of-type(2) .font-bold.text-gray-900",
+          "sampleValue": "14:30",
+          "type": "string"
+        },
+        {
+          "name": "schedule_patient_1",
+          "selector": "div:nth-of-type(2) .font-medium.text-gray-900",
+          "sampleValue": "Johnson, Robert M.",
+          "type": "string"
+        },
+        {
+          "name": "schedule_status_1",
+          "selector": "div:nth-of-type(2) .uppercase",
+          "sampleValue": "NEXT",
+          "type": "string"
+        },
+        {
+          "name": "schedule_time_2",
+          "selector": "div:nth-of-type(3) .font-bold.text-gray-900",
+          "sampleValue": "14:45",
+          "type": "string"
+        },
+        {
+          "name": "schedule_patient_2",
+          "selector": "div:nth-of-type(3) .font-medium.text-gray-900",
+          "sampleValue": "Rodriguez, Maria E.",
+          "type": "string"
+        },
+        {
+          "name": "schedule_status_2",
+          "selector": "div:nth-of-type(3) .uppercase",
+          "sampleValue": "SCHEDULED",
+          "type": "string"
+        },
+        {
+          "name": "lastSync",
+          "selector": "footer span:contains('Last sync:')",
+          "sampleValue": "8:14:03 AM",
+          "type": "string"
+        },
+        {
+          "name": "sessionExpiry",
+          "selector": "footer span:contains('Session expires')",
+          "sampleValue": "58 minutes",
+          "type": "string"
+        }
+      ],
+      "cost": "0.051851"
+    }
+  ]
+}
