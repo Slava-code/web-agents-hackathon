@@ -41,7 +41,7 @@ type EventData =
   | { type: 'diff'; diff: DiffData; hasChanges: boolean; isFirstRun?: boolean }
   | { type: 'convex'; ok: boolean; deviceId: string; deviceName: string; fieldsSent: number; error?: string; message?: string }
 
-type Tab = 'learn' | 'scrape' | 'monitor' | 'custom'
+type Tab = 'learn' | 'scrape' | 'monitor' | 'watch' | 'custom'
 
 // ─── Component ───────────────────────────────────────────────────────
 
@@ -72,6 +72,12 @@ export default function AgentPage() {
   const [monitorConvex, setMonitorConvex] = useState<{ ok: boolean; deviceName: string; fieldsSent: number; error?: string; message?: string } | null>(null)
   const [monitorPrevSnapshot, setMonitorPrevSnapshot] = useState<Record<string, unknown> | null | undefined>(undefined)
   const [monitorIsFirstRun, setMonitorIsFirstRun] = useState(false)
+
+  // Watch-specific state
+  const [watchHeartbeats, setWatchHeartbeats] = useState(0)
+  const [watchChanges, setWatchChanges] = useState<{ iteration: number; diff: DiffData; timestamp: number }[]>([])
+  const [watchActive, setWatchActive] = useState(false)
+  const [watchTotalCost, setWatchTotalCost] = useState(0)
 
   // Custom state
   const [customTask, setCustomTask] = useState('')
@@ -105,6 +111,10 @@ export default function AgentPage() {
     setMonitorConvex(null)
     setMonitorPrevSnapshot(undefined)
     setMonitorIsFirstRun(false)
+    setWatchHeartbeats(0)
+    setWatchChanges([])
+    setWatchActive(false)
+    setWatchTotalCost(0)
   }
 
   // ─── SSE stream consumer ──────────────────────────────────────────
@@ -165,6 +175,29 @@ export default function AgentPage() {
               error: data.error,
               message: data.message,
             })
+          }
+
+          // Watch events
+          const wd = data as Record<string, unknown>
+          if (wd.type === 'watch_started') {
+            setWatchActive(true)
+            setStatus('watching')
+          } else if (wd.type === 'heartbeat') {
+            setWatchHeartbeats((p) => p + 1)
+            setWatchTotalCost((p) => p + parseFloat(String(wd.cost || '0')))
+            setStatus('watching')
+          } else if (wd.type === 'change_detected') {
+            const diff = wd.diff as DiffData
+            setWatchChanges((prev) => [...prev, { iteration: wd.iteration as number, diff, timestamp: Date.now() }])
+            setWatchTotalCost((p) => p + parseFloat(String(wd.cost || '0')))
+          } else if (wd.type === 'convex_push') {
+            // handled in events display
+          } else if (wd.type === 'watch_ended' || wd.type === 'watch_error') {
+            if (wd.type === 'watch_ended') {
+              setWatchActive(false)
+              setIsRunning(false)
+              setStatus('complete')
+            }
           }
         } catch { /* skip */ }
       }
@@ -323,6 +356,52 @@ export default function AgentPage() {
     }
   }
 
+  // ─── Watch handler ───────────────────────────────────────────────
+
+  const handleWatch = async () => {
+    if (!selectedSiteId || !selectedRoute) {
+      setError('Select a saved site and route')
+      return
+    }
+
+    resetState()
+    setIsRunning(true)
+    setWatchActive(true)
+    setStatus('watching')
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const body = { siteId: selectedSiteId, route: selectedRoute, intervalMs: 30000 }
+      console.log('[Watch] POST /api/watch', body)
+      const res = await fetch('/api/watch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      })
+
+      console.log('[Watch] Response:', res.status, res.statusText)
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => '')
+        console.error('[Watch] Error body:', errorBody)
+        setError(`Request failed: ${res.status} — ${errorBody || res.statusText}`)
+        setIsRunning(false)
+        setWatchActive(false)
+        return
+      }
+
+      await consumeStream(res)
+    } catch (e: unknown) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        setError(e instanceof Error ? e.message : String(e))
+      }
+      setIsRunning(false)
+      setWatchActive(false)
+    }
+  }
+
   // ─── Custom handler ───────────────────────────────────────────────
 
   const handleCustom = async () => {
@@ -383,6 +462,7 @@ export default function AgentPage() {
     starting: 'bg-yellow-500 animate-pulse',
     learning: 'bg-purple-500 animate-pulse',
     monitoring: 'bg-amber-500 animate-pulse',
+    watching: 'bg-emerald-500 animate-pulse',
     created: 'bg-yellow-500 animate-pulse',
     running: 'bg-blue-500 animate-pulse',
     complete: 'bg-green-500',
@@ -512,7 +592,7 @@ export default function AgentPage() {
         <div className="w-[420px] border-l border-slate-700 flex flex-col overflow-hidden">
           {/* Tab Switcher */}
           <div className="flex border-b border-slate-700">
-            {(['learn', 'scrape', 'monitor', 'custom'] as Tab[]).map((t) => (
+            {(['learn', 'scrape', 'monitor', 'watch', 'custom'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => { setTab(t); resetState() }}
@@ -713,6 +793,81 @@ export default function AgentPage() {
               </div>
             )}
 
+            {/* ── Watch Tab ──────────────────────────────────── */}
+            {tab === 'watch' && (
+              <div>
+                <SiteRouteSelector
+                  actionLabel={watchActive ? 'Watching...' : 'Start Watch'}
+                  onAction={handleWatch}
+                  buttonColor="bg-emerald-600 hover:bg-emerald-500"
+                />
+
+                {/* Watch Status Dashboard */}
+                {watchActive && (
+                  <div className="px-4 pb-3 space-y-3">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-xs text-slate-400 uppercase">Heartbeats</span>
+                        </div>
+                        <span className="text-lg font-mono text-emerald-400">{watchHeartbeats}</span>
+                      </div>
+                      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+                        <div className="text-xs text-slate-400 uppercase mb-1">Changes</div>
+                        <span className={`text-lg font-mono ${watchChanges.length > 0 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                          {watchChanges.length}
+                        </span>
+                      </div>
+                      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
+                        <div className="text-xs text-slate-400 uppercase mb-1">Cost</div>
+                        <span className="text-lg font-mono text-green-400">${watchTotalCost.toFixed(4)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Change Log */}
+                {watchChanges.length > 0 && (
+                  <div className="px-4 pb-3 space-y-2">
+                    <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Change Log</h3>
+                    <div className="max-h-[300px] overflow-auto space-y-2">
+                      {watchChanges.slice().reverse().map((change, i) => (
+                        <div key={i} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-yellow-400 font-medium">
+                              Iteration #{change.iteration}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              {new Date(change.timestamp).toLocaleTimeString()}
+                            </span>
+                          </div>
+                          {Object.entries(change.diff.changed).map(([key, val]) => (
+                            <div key={key} className="text-xs font-mono">
+                              <span className="text-yellow-400">{key}</span>
+                              {': '}
+                              <span className="text-red-400 line-through">{JSON.stringify(val.old)}</span>
+                              {' → '}
+                              <span className="text-green-400">{JSON.stringify(val.new)}</span>
+                            </div>
+                          ))}
+                          {Object.entries(change.diff.added).map(([key, val]) => (
+                            <div key={key} className="text-xs font-mono">
+                              <span className="text-green-400">+ {key}</span>
+                              <span className="text-slate-400 ml-2">{JSON.stringify(val)}</span>
+                            </div>
+                          ))}
+                          {change.diff.removed.map((key) => (
+                            <div key={key} className="text-xs font-mono text-red-400">- {key}</div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* ── Custom Tab ──────────────────────────────────── */}
             {tab === 'custom' && (
               <div className="p-4 space-y-3">
@@ -803,6 +958,25 @@ export default function AgentPage() {
                           <span className="text-green-400">
                             {Object.keys(ev.data).length} fields extracted
                           </span>
+                        )}
+                        {(ev as Record<string, unknown>).type === 'watch_started' && (
+                          <span className="text-emerald-400">Watching {String((ev as Record<string, unknown>).url)}</span>
+                        )}
+                        {(ev as Record<string, unknown>).type === 'heartbeat' && (
+                          <span className="text-slate-500">no changes (#{String((ev as Record<string, unknown>).iteration)})</span>
+                        )}
+                        {(ev as Record<string, unknown>).type === 'change_detected' && (
+                          <span className="text-yellow-400">changes found at iteration #{String((ev as Record<string, unknown>).iteration)}</span>
+                        )}
+                        {(ev as Record<string, unknown>).type === 'convex_push' && (
+                          <span className={(ev as Record<string, unknown>).ok ? 'text-green-400' : 'text-red-400'}>
+                            {(ev as Record<string, unknown>).ok
+                              ? `Pushed ${(ev as Record<string, unknown>).fieldsSent} fields`
+                              : `Failed: ${(ev as Record<string, unknown>).error}`}
+                          </span>
+                        )}
+                        {(ev as Record<string, unknown>).type === 'watch_error' && (
+                          <span className="text-red-400">{String((ev as Record<string, unknown>).message)}</span>
                         )}
                       </div>
                     ))}

@@ -3,6 +3,7 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import { storeLearnedRoute } from "@/lib/supermemory";
+import { generateQuickCheckScript, generateFullExtractScript } from "@/lib/script-generator";
 
 const BU_API = "https://api.browser-use.com/api/v3";
 const POLL_INTERVAL_MS = 2000;
@@ -31,6 +32,8 @@ interface LearnedRoute {
   pageLayout: string;
   fields: { name: string; selector: string; sampleValue: string; type: string }[];
   cost: string;
+  quickCheckScript?: string;
+  fullExtractScript?: string;
 }
 
 async function pollSession(
@@ -208,6 +211,8 @@ export async function POST(req: NextRequest) {
               pageLayout: parsed.pageLayout,
               fields: parsed.fields,
               cost: result.cost,
+              quickCheckScript: generateQuickCheckScript(parsed.fields),
+              fullExtractScript: generateFullExtractScript(parsed.fields),
             };
             learnedRoutes.push(learned);
 

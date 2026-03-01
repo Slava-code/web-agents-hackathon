@@ -14,6 +14,8 @@ export interface SiteRoute {
   path: string;
   pagePurpose: string;
   fields: SiteField[];
+  quickCheckScript?: string;
+  fullExtractScript?: string;
 }
 
 export interface SiteConfig {
@@ -96,11 +98,35 @@ export async function loadLastSnapshot(
 export async function saveSnapshot(
   hostname: string,
   routePath: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  hash?: string
 ): Promise<void> {
   await mkdir(SNAPSHOTS_DIR, { recursive: true });
   await writeFile(
     snapshotPath(hostname, routePath),
-    JSON.stringify({ hostname, path: routePath, timestamp: new Date().toISOString(), data }, null, 2)
+    JSON.stringify({ hostname, path: routePath, timestamp: new Date().toISOString(), hash: hash || null, data }, null, 2)
   );
+}
+
+export async function loadLastHash(
+  hostname: string,
+  routePath: string
+): Promise<string | null> {
+  try {
+    const raw = await readFile(snapshotPath(hostname, routePath), "utf-8");
+    const parsed = JSON.parse(raw);
+    return parsed.hash || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function loadSiteConfigByHostname(hostname: string): Promise<SiteConfig | null> {
+  try {
+    const filename = `${hostname.replace(/[^a-zA-Z0-9.-]/g, "_")}.json`;
+    const raw = await readFile(join(SITES_DIR, filename), "utf-8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
 }
