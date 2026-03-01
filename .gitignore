@@ -47,3 +47,8 @@ data/snapshots/*.json
 
 # local claude config
 CLAUDE.local.md
+
+# Demo videos (too large for git)
+public/demo-tug.mov
+public/demo-uv.mov
+*.mov

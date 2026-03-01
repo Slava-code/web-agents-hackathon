@@ -172,6 +172,12 @@ export default function CommandCenter() {
   const abortRef = useRef<AbortController | null>(null)
   let nextEventId = useRef(0)
 
+  // --- Demo video state ---
+  const [demoVideoSrc, setDemoVideoSrc] = useState<string | null>(null)
+  const [demoVideoLabel, setDemoVideoLabel] = useState('')
+  const [demoComplete, setDemoComplete] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
   // --- Orchestration state ---
   const [orchestrating, setOrchestrating] = useState(false)
   const [orchestratePhase, setOrchestratePhase] = useState(0)
@@ -267,7 +273,24 @@ export default function CommandCenter() {
     }
   }
 
-  // --- Demo simulation: timed Convex writes to drive Unity ───────────
+  // --- Demo simulation: play videos + timed Convex writes ────────────
+  function playVideo(src: string, label: string): Promise<void> {
+    return new Promise((resolve) => {
+      setDemoVideoSrc(src)
+      setDemoVideoLabel(label)
+      // Wait for next tick so the video element mounts, then play
+      setTimeout(() => {
+        const vid = videoRef.current
+        if (vid) {
+          vid.onended = () => resolve()
+          vid.play().catch(() => resolve())
+        } else {
+          resolve()
+        }
+      }, 100)
+    })
+  }
+
   async function runDemoSimulation() {
     setOrchestrating(true)
     setOrchestratePhase(0)
@@ -278,6 +301,8 @@ export default function CommandCenter() {
     setOrchestrateTotalPhases(2)
     setOrchestrateScenario('prepare_room')
     setBrowserStatus('running')
+    setDemoComplete(false)
+    setDemoVideoSrc(null)
 
     const post = (path: string, body: object) =>
       fetch(`${CONVEX_SITE_URL}${path}`, {
@@ -306,66 +331,42 @@ export default function CommandCenter() {
       })
       const { tug, uv } = result.tasks
       addLog('Coordination initialized — dispatching 2 browser agents')
-      await wait(1500)
 
-      // ── PHASE 1: TUG (2s buffer + 20s video + 2s buffer) ──
+      // ── PHASE 1: TUG ──
+      await wait(1000)
       setOrchestratePhase(1)
       setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 1, agentId: 'tug-agent', taskName: 'TUG Deploy to Sterilization' }])
       addLog('Launching BrowserUse agent → TUG Fleet Monitor')
       await post('/agent-task-update', { taskId: tug, status: 'running' })
-      await wait(2000)
-      addLog('[TUG Fleet Monitor] Agent opened dashboard, scanning fleet table')
-      await wait(2000)
-      addLog('[TUG Fleet Monitor] Found TUG-01 (Alpha) — status: IDLE, battery: 94%')
-      await wait(1500)
-      addLog('[TUG Fleet Monitor] Clicking "Deploy to Sterilization" for TUG-01')
-      await wait(2000)
-      addLog('[TUG Fleet Monitor] TUG-01 status changed to EN_ROUTE')
-      await wait(5000)
-      addLog('[TUG Fleet Monitor] TUG-01 in transit — progress: 50%')
-      await wait(5000)
-      addLog('[TUG Fleet Monitor] TUG-01 approaching destination — progress: 90%')
-      await wait(4000)
-      addLog('[TUG Fleet Monitor] TUG-01 status: ARRIVED — delivery confirmed')
-      await wait(2000)
+
+      // Play TUG video — waits until video ends
+      await playVideo('/demo-tug.mov', 'BrowserUse Agent — TUG Fleet Monitor')
+
       await post('/agent-task-update', { taskId: tug, status: 'completed', output: { deployed: true, botName: 'Alpha', newStatus: 'ARRIVED' } })
       setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 1, agentId: 'tug-agent', output: {}, cost: '$0.04' }])
       addLog('Phase 1 complete — TUG bot deployed, handing off to UV agent')
 
-      // ── PHASE 2: UV (2s buffer + 20s video + 2s buffer) ──
+      // ── PHASE 2: UV ──
+      await wait(1000)
       setOrchestratePhase(2)
       setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 2, agentId: 'uv-agent', taskName: 'UV Start Sterilization Cycle' }])
       addLog('Launching BrowserUse agent → UV-C Disinfection System')
       await post('/agent-task-update', { taskId: uv, status: 'running' })
-      await wait(2000)
-      addLog('[UV Robot] Agent opened UltraClean dashboard')
-      await wait(1500)
-      addLog('[UV Robot] Setting target room to OR-3')
-      await wait(1500)
-      addLog('[UV Robot] Selected mode: Standard')
-      await wait(1500)
-      addLog('[UV Robot] Clicking "Start Cycle"')
-      await wait(2000)
-      addLog('[UV Robot] Sterilization cycle running — progress: 0%')
-      await wait(4000)
-      addLog('[UV Robot] Sterilization progress: 30%')
-      await wait(4000)
-      addLog('[UV Robot] Sterilization progress: 60%')
-      await wait(4000)
-      addLog('[UV Robot] Sterilization progress: 90%')
-      await wait(3000)
-      addLog('[UV Robot] Cycle complete — 100%, status: complete')
-      await wait(2000)
+
+      // Play UV video — waits until video ends
+      await playVideo('/demo-uv.mov', 'BrowserUse Agent — UV-C Disinfection System')
+
       await post('/agent-task-update', { taskId: uv, status: 'completed', output: { sterilized: true, mode: 'standard', targetRoom: 'OR-3' } })
       setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 2, agentId: 'uv-agent', output: {}, cost: '$0.04' }])
       addLog('Phase 2 complete — OR-3 sterilization confirmed')
 
       // Done
-      await wait(1000)
+      setDemoVideoSrc(null)
       addLog('All agents finished — OR-3 is ready for surgery')
       setOrchestrateDone(true)
       setOrchestrateCost('$0.08')
       setBrowserStatus('complete')
+      setDemoComplete(true)
       const id = nextEventId.current++
       setBrowserEvents(prev => [...prev, { id, timestamp: Date.now(), data: { type: 'done', status: 'complete', output: null, cost: '$0.08' } }])
     } catch (err: any) {
@@ -638,10 +639,41 @@ export default function CommandCenter() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ===== LEFT: Live Browser Viewer ===== */}
+        {/* ===== LEFT: Live Browser Viewer / Demo Video ===== */}
         <section className="lg:col-span-7">
           <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden relative">
-            {liveUrl ? (
+            {demoVideoSrc ? (
+              <div className="relative">
+                <video
+                  ref={videoRef}
+                  key={demoVideoSrc}
+                  src={demoVideoSrc}
+                  className="w-full bg-black"
+                  style={{ height: 'calc(100vh - 340px)', minHeight: '400px', objectFit: 'contain' }}
+                  muted
+                  playsInline
+                />
+                <div className="absolute top-3 left-3 px-3 py-1.5 bg-black/70 backdrop-blur-sm rounded-md flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-xs text-white font-medium">{demoVideoLabel}</span>
+                </div>
+              </div>
+            ) : demoComplete ? (
+              <div
+                className="flex items-center justify-center bg-slate-950"
+                style={{ height: 'calc(100vh - 340px)', minHeight: '400px' }}
+              >
+                <div className="text-center">
+                  <div className="inline-flex items-center gap-3 px-8 py-5 bg-emerald-500/15 border-2 border-emerald-500/40 rounded-xl">
+                    <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-2xl font-bold text-emerald-400">Command Completed</span>
+                  </div>
+                  <p className="text-sm text-slate-500 mt-4">OR-3 is ready for surgery</p>
+                </div>
+              </div>
+            ) : liveUrl ? (
               <div className="relative">
                 <iframe
                   src={liveUrl}
