@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom scrollbar for dark themes */
+.dark-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark-scrollbar::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+.dark-scrollbar::-webkit-scrollbar-thumb {
+  background: #4a4a6a;
+  border-radius: 4px;
+}
+
+/* Legacy scrollbar for old-school look */
+.legacy-scrollbar::-webkit-scrollbar {
+  width: 16px;
+}
+
+.legacy-scrollbar::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  border: 1px solid #999;
+}
+
+.legacy-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, #c0c0c0, #e0e0e0, #c0c0c0);
+  border: 1px solid #666;
+}
+
+/* Progress ring animation */
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.progress-pulse {
+  animation: progress-pulse 2s ease-in-out infinite;
+}
+
+/* Blinking indicator */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Chart animation */
+@keyframes chart-line {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* Recording indicator pulse */
+@keyframes rec-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+.rec-pulse {
+  animation: rec-pulse 1.5s ease-in-out infinite;
+}
