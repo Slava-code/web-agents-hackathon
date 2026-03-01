@@ -15,13 +15,6 @@ const CONVEX_SITE_URL =
 
 const OR3_ID = ROOM_IDS.OR_3 as Id<'rooms'>
 
-const CATEGORY_ICONS: Record<string, string> = {
-  sterilization: '\u2622',
-  transport: '\u{1F69A}',
-  monitoring: '\u{1F321}',
-  scheduling: '\u{1F4C5}',
-}
-
 const STATUS_COLORS: Record<string, string> = {
   idle: 'bg-slate-500',
   preparing: 'bg-amber-500',
@@ -182,11 +175,12 @@ export default function CommandCenter() {
   // --- Orchestration state ---
   const [orchestrating, setOrchestrating] = useState(false)
   const [orchestratePhase, setOrchestratePhase] = useState(0)
-  const [orchestrateTotalPhases] = useState(4)
+  const [orchestrateTotalPhases, setOrchestrateTotalPhases] = useState(4)
   const [orchestrateEvents, setOrchestrateEvents] = useState<OrchestrateEvent[]>([])
   const [orchestrateCost, setOrchestrateCost] = useState<string | null>(null)
   const [orchestrateDone, setOrchestrateDone] = useState(false)
   const [orchestrateFailed, setOrchestrateFailed] = useState(false)
+  const [orchestrateScenario, setOrchestrateScenario] = useState<string>('emergency')
   const orchestrateAbortRef = useRef<AbortController | null>(null)
 
   // --- SSE stream consumer (simplified from /agent) ---
@@ -276,12 +270,12 @@ export default function CommandCenter() {
   // --- Handlers ---
   async function handleSubmitCommand(e: React.FormEvent) {
     e.preventDefault()
-    if (!commandText.trim()) return
+    if (!commandText.trim() || orchestrating || browserRunning) return
     const text = commandText.trim()
     setCommandText('')
-    // Fire both: Convex command + browser session
+    // Fire Convex command + orchestrate prepare_room
     await submitCommand({ text, roomId: OR3_ID })
-    startBrowserSession(text)
+    handleOrchestrate('prepare_room')
   }
 
   function handleStop() {
@@ -310,29 +304,30 @@ export default function CommandCenter() {
     setTimeout(() => setTriggerStatus(null), 3000)
   }
 
-  async function handleResetAll() {
-    setTriggerStatus('Resetting all devices...')
-    if (roomState?.devices) {
-      for (const device of roomState.devices) {
-        await fetch(`${CONVEX_SITE_URL}/device-update`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ deviceId: device._id, status: 'idle' }),
-        })
-      }
-    }
-    setTriggerStatus('All devices reset to idle')
-    setTimeout(() => setTriggerStatus(null), 2000)
+  // --- Shared Orchestrator ---
+  const SCENARIO_PIPELINES: Record<string, { label: string; agent: string; phase: number }[]> = {
+    prepare_room: [
+      { label: 'TUG', agent: 'tug-agent', phase: 1 },
+      { label: 'UV', agent: 'uv-agent', phase: 2 },
+    ],
+    ventilation_failure: [
+      { label: 'ENV', agent: 'env-agent', phase: 1 },
+      { label: 'TUG', agent: 'tug-agent', phase: 2 },
+      { label: 'UV', agent: 'uv-agent', phase: 3 },
+      { label: 'EHR', agent: 'ehr-agent', phase: 4 },
+    ],
   }
 
-  // --- Emergency Response Orchestrator ---
-  async function handleEmergencyResponse() {
+  async function handleOrchestrate(scenario: string) {
+    const pipeline = SCENARIO_PIPELINES[scenario] ?? SCENARIO_PIPELINES.ventilation_failure
     setOrchestrating(true)
     setOrchestratePhase(0)
     setOrchestrateEvents([])
     setOrchestrateCost(null)
     setOrchestrateDone(false)
     setOrchestrateFailed(false)
+    setOrchestrateTotalPhases(pipeline.length)
+    setOrchestrateScenario(scenario)
     setBrowserStatus('starting')
     setLiveUrl(null)
 
@@ -343,7 +338,7 @@ export default function CommandCenter() {
       const res = await fetch('/api/orchestrate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomId: OR3_ID, scenario: 'ventilation_failure' }),
+        body: JSON.stringify({ roomId: OR3_ID, scenario }),
         signal: controller.signal,
       })
 
@@ -384,7 +379,7 @@ export default function CommandCenter() {
                 break
               case 'phase_start':
                 setOrchestratePhase(event.phase)
-                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'status', status: `Phase ${event.phase}/4: ${event.taskName}`, output: null, cost: null } }])
+                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'status', status: `Phase ${event.phase}/${pipeline.length}: ${event.taskName}`, output: null, cost: null } }])
                 break
               case 'agent_start':
                 if (event.liveUrl) setLiveUrl(event.liveUrl)
@@ -429,6 +424,10 @@ export default function CommandCenter() {
       }
       setOrchestrating(false)
     }
+  }
+
+  function handleEmergencyResponse() {
+    handleOrchestrate('ventilation_failure')
   }
 
   function handleStopOrchestrate() {
@@ -603,41 +602,6 @@ export default function CommandCenter() {
                 : 'Loading...'}
             </div>
 
-            {/* Device cards */}
-            <div className="space-y-2">
-              {roomState?.devices?.map((device) => (
-                <div
-                  key={device._id}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-md bg-slate-800/60 border border-slate-700/50"
-                >
-                  <span className="text-lg w-7 text-center">
-                    {CATEGORY_ICONS[device.category] ?? '\u2699'}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-200 truncate">
-                      {device.name}
-                    </div>
-                    {device.currentAction && (
-                      <div className="text-xs text-slate-500 truncate mt-0.5">
-                        {device.currentAction}
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                      STATUS_COLORS[device.status] ?? 'bg-slate-500'
-                    } ${device.status === 'configuring' ? 'animate-pulse' : ''}`}
-                    title={device.status}
-                  />
-                </div>
-              ))}
-
-              {!roomState?.devices && (
-                <div className="text-sm text-slate-600 text-center py-4">
-                  Loading devices...
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Command Input */}
@@ -655,10 +619,10 @@ export default function CommandCenter() {
               />
               <button
                 type="submit"
-                disabled={browserRunning}
+                disabled={orchestrating || browserRunning}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors whitespace-nowrap"
               >
-                {browserRunning ? 'Running...' : 'Submit'}
+                {orchestrating ? 'Running...' : 'Submit'}
               </button>
             </form>
 
@@ -729,12 +693,7 @@ export default function CommandCenter() {
             {(orchestrating || orchestrateDone || orchestrateFailed) && (
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
-                  {[
-                    { label: 'ENV', agent: 'env-agent', phase: 1 },
-                    { label: 'TUG', agent: 'tug-agent', phase: 2 },
-                    { label: 'UV', agent: 'uv-agent', phase: 3 },
-                    { label: 'EHR', agent: 'ehr-agent', phase: 4 },
-                  ].map((step) => {
+                  {(SCENARIO_PIPELINES[orchestrateScenario] ?? SCENARIO_PIPELINES.ventilation_failure).map((step) => {
                     const isComplete = orchestrateEvents.some(
                       (e) => e.type === 'phase_complete' && e.phase === step.phase
                     )
@@ -785,27 +744,10 @@ export default function CommandCenter() {
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleTriggerAnomaly('ventilation_failure')}
-                className="px-3 py-1.5 bg-red-900/40 border border-red-700/50 text-red-400 text-xs font-medium rounded-md hover:bg-red-900/60 transition-colors"
+                disabled={orchestrating || browserRunning}
+                className="px-3 py-1.5 bg-red-900/40 border border-red-700/50 text-red-400 text-xs font-medium rounded-md hover:bg-red-900/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Trigger: Ventilation Failure
-              </button>
-              <button
-                onClick={() => handleTriggerAnomaly('battery_failure')}
-                className="px-3 py-1.5 bg-orange-900/40 border border-orange-700/50 text-orange-400 text-xs font-medium rounded-md hover:bg-orange-900/60 transition-colors"
-              >
-                Trigger: Battery Failure
-              </button>
-              <button
-                onClick={() => handleTriggerAnomaly('co2_spike')}
-                className="px-3 py-1.5 bg-yellow-900/40 border border-yellow-700/50 text-yellow-400 text-xs font-medium rounded-md hover:bg-yellow-900/60 transition-colors"
-              >
-                Trigger: CO2 Spike
-              </button>
-              <button
-                onClick={handleResetAll}
-                className="px-3 py-1.5 bg-slate-800 border border-slate-600 text-slate-400 text-xs font-medium rounded-md hover:bg-slate-700 transition-colors"
-              >
-                Reset All Devices
               </button>
             </div>
             {triggerStatus && (

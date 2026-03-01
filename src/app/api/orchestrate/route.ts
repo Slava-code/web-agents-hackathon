@@ -6,8 +6,11 @@ const CONVEX_URL =
   process.env.NEXT_PUBLIC_CONVEX_SITE_URL ||
   "https://impartial-whale-32.convex.site";
 
-// Agent ordering — sequential phases
-const AGENT_ORDER = ["env-agent", "tug-agent", "uv-agent", "ehr-agent"] as const;
+// Agent ordering by scenario — sequential phases
+const SCENARIO_AGENTS: Record<string, string[]> = {
+  prepare_room: ["tug-agent", "uv-agent"],
+  emergency_air_quality_response: ["env-agent", "tug-agent", "uv-agent", "ehr-agent"],
+};
 
 interface TaskInfo {
   _id: string;
@@ -58,6 +61,11 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "roomId is required" }, { status: 400 });
   }
 
+  // Determine scenario type for coordination
+  const isPrepareRoom = scenario === "prepare_room";
+  const coordinationScenario = isPrepareRoom ? "prepare_room" : "emergency_air_quality_response";
+  const agentOrder = SCENARIO_AGENTS[coordinationScenario] ?? SCENARIO_AGENTS.emergency_air_quality_response;
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -93,29 +101,31 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        // ── Step 2: Trigger anomaly ──
-        const anomalyResult = (await convexFetch("/trigger-anomaly", {
-          method: "POST",
-          body: { roomId, scenario },
-        })) as { ok: boolean; error?: string };
+        // ── Step 2: Trigger anomaly (skip for prepare_room) ──
+        if (!isPrepareRoom) {
+          const anomalyResult = (await convexFetch("/trigger-anomaly", {
+            method: "POST",
+            body: { roomId, scenario },
+          })) as { ok: boolean; error?: string };
 
-        if (!anomalyResult.ok) {
-          send({
-            type: "error",
-            message: `Failed to trigger anomaly: ${anomalyResult.error ?? "unknown"}`,
-          });
-          controller.close();
-          return;
+          if (!anomalyResult.ok) {
+            send({
+              type: "error",
+              message: `Failed to trigger anomaly: ${anomalyResult.error ?? "unknown"}`,
+            });
+            controller.close();
+            return;
+          }
+
+          send({ type: "anomaly_triggered", scenario });
         }
-
-        send({ type: "anomaly_triggered", scenario });
 
         // ── Step 3: Generate commandId and create task graph ──
         commandId = `cmd-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
         const startResult = (await convexFetch("/coordination-start", {
           method: "POST",
-          body: { commandId, roomId, scenario: "emergency_air_quality_response" },
+          body: { commandId, roomId, scenario: coordinationScenario },
         })) as {
           ok: boolean;
           commandId: string;
@@ -142,10 +152,10 @@ export async function POST(req: NextRequest) {
         });
 
         // ── Step 4: Execute each phase sequentially ──
-        for (let phaseIdx = 0; phaseIdx < AGENT_ORDER.length; phaseIdx++) {
+        for (let phaseIdx = 0; phaseIdx < agentOrder.length; phaseIdx++) {
           if (failed) break;
 
-          const agentId = AGENT_ORDER[phaseIdx];
+          const agentId = agentOrder[phaseIdx];
           const phase = phaseIdx + 1;
 
           try {

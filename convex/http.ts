@@ -623,7 +623,7 @@ http.route({
       }
 
       const scenarioName = scenario ?? "emergency_air_quality_response";
-      const validScenarios = ["emergency_air_quality_response"];
+      const validScenarios = ["emergency_air_quality_response", "prepare_room"];
       if (!validScenarios.includes(scenarioName)) {
         return jsonResponse(
           { error: `Invalid scenario. Allowed: ${validScenarios.join(", ")}` },
@@ -631,13 +631,14 @@ http.route({
         );
       }
 
-      const result = await ctx.runMutation(
-        internal.scenarios.createEmergencyAirQualityScenario,
-        {
-          commandId,
-          roomId: roomId as Id<"rooms">,
-        },
-      );
+      const scenarioFn = scenarioName === "prepare_room"
+        ? internal.scenarios.createPrepareRoomScenario
+        : internal.scenarios.createEmergencyAirQualityScenario;
+
+      const result = await ctx.runMutation(scenarioFn, {
+        commandId,
+        roomId: roomId as Id<"rooms">,
+      });
 
       return jsonResponse(result);
     } catch (e: any) {

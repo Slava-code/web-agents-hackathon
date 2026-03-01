@@ -135,3 +135,94 @@ export const createEmergencyAirQualityScenario = internalMutation({
     };
   },
 });
+
+export const createPrepareRoomScenario = internalMutation({
+  args: {
+    commandId: v.string(),
+    roomId: v.id("rooms"),
+  },
+  handler: async (ctx, args): Promise<{
+    ok: boolean;
+    commandId: string;
+    tasks: { tug: string; uv: string };
+    taskCount: number;
+  }> => {
+    // Set room to "preparing" immediately
+    const room = await ctx.db.get(args.roomId);
+    if (room) {
+      await ctx.db.patch(args.roomId, { status: "preparing" });
+    }
+
+    // Look up devices in the room
+    const devices = await ctx.db
+      .query("devices")
+      .withIndex("by_room", (q) => q.eq("roomId", args.roomId))
+      .collect();
+
+    const findDevice = (name: string) =>
+      devices.find((d) => d.name === name);
+
+    const tugDevice = findDevice("TUG Fleet Monitor");
+    const uvDevice = findDevice("UV Robot");
+
+    if (!tugDevice || !uvDevice) {
+      const missing = [
+        !tugDevice && "TUG Fleet Monitor",
+        !uvDevice && "UV Robot",
+      ].filter(Boolean);
+      throw new Error(`Missing devices in room: ${missing.join(", ")}`);
+    }
+
+    // Phase 1: TUG — Deploy to Sterilization (no deps) → ready
+    const tug = await ctx.runMutation(internal.taskGraph.createTask, {
+      commandId: args.commandId,
+      agentId: "tug-agent",
+      taskName: "TUG Deploy to Sterilization",
+      phase: 1,
+      dependsOn: [],
+      input: {
+        roomId: args.roomId,
+        deviceId: tugDevice._id,
+        deviceUrl: tugDevice.url,
+        scenarioType: "prepare_room",
+        instructions: `Navigate to ${tugDevice.url}. Find the TUG bot named 'Alpha' with status 'IDLE'. Click the 'Deploy to Sterilization' button next to it. Wait until the bot status changes from IDLE to EN_ROUTE.`,
+        expectedOutput: {
+          deployed: "boolean",
+          botName: "Alpha",
+          newStatus: "EN_ROUTE",
+        },
+      },
+    });
+
+    // Phase 2: UV — Start Sterilization Cycle (depends on TUG)
+    const uv = await ctx.runMutation(internal.taskGraph.createTask, {
+      commandId: args.commandId,
+      agentId: "uv-agent",
+      taskName: "UV Start Sterilization Cycle",
+      phase: 2,
+      dependsOn: [tug.taskId],
+      input: {
+        roomId: args.roomId,
+        deviceId: uvDevice._id,
+        deviceUrl: uvDevice.url,
+        scenarioType: "prepare_room",
+        instructions: `Navigate to ${uvDevice.url}. Click on the room dropdown labeled 'Target Room' and select 'OR-3'. Click the 'standard' cycle mode radio button. Click the 'Start Cycle' button. Wait until the progress reaches 100% and status shows 'complete'.`,
+        expectedOutput: {
+          sterilized: "boolean",
+          mode: "standard",
+          targetRoom: "OR-3",
+        },
+      },
+    });
+
+    return {
+      ok: true,
+      commandId: args.commandId,
+      tasks: {
+        tug: tug.taskId,
+        uv: uv.taskId,
+      },
+      taskCount: 2,
+    };
+  },
+});

@@ -122,16 +122,30 @@ export const updateTaskStatus = internalMutation({
         refreshedTasks.every((t) => t.status === "completed");
 
       if (allDone) {
-        // Auto-resolve anomaly: find the roomId from any task's input
+        // Find the roomId and scenarioType from any task's input
         const taskWithRoom = refreshedTasks.find(
           (t) => t.input && (t.input as Record<string, unknown>).roomId
         );
         if (taskWithRoom) {
-          const roomId = (taskWithRoom.input as Record<string, unknown>)
-            .roomId as string;
-          await ctx.runMutation(internal.deviceMutations.resolveAnomaly, {
-            roomId: roomId as Id<"rooms">,
-          });
+          const input = taskWithRoom.input as Record<string, unknown>;
+          const roomId = input.roomId as string;
+          const scenarioType = input.scenarioType as string | undefined;
+
+          if (scenarioType === "prepare_room") {
+            // For prepare_room: just set room to "ready" directly
+            const roomDoc = await ctx.db.get(roomId as Id<"rooms">);
+            if (roomDoc) {
+              await ctx.db.patch(roomId as Id<"rooms">, {
+                status: "ready",
+                updatedAt: Date.now(),
+              });
+            }
+          } else {
+            // For emergency flows: resolve anomaly (resets env readings + devices)
+            await ctx.runMutation(internal.deviceMutations.resolveAnomaly, {
+              roomId: roomId as Id<"rooms">,
+            });
+          }
         }
       }
 
