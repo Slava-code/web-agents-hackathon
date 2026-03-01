@@ -4,6 +4,9 @@ const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://impa
 export const DEVICE_IDS = {
   UV_ROBOT: 'jd72bxwjgw87028ccbp6zzmaes823nys',
   TUG_ROBOT: 'jd74ec16aby2rbteq1rwjcc0t1822pfx',
+  VARIABLE_TRACKER: 'placeholder-variable-tracker',
+  ENV_MONITORING: 'placeholder-env-monitoring',
+  SCHEDULING: 'placeholder-scheduling',
 } as const
 
 // Room IDs
