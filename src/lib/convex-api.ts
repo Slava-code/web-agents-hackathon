@@ -1,19 +1,19 @@
-const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://impartial-whale-32.convex.site'
+const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://adept-wren-805.convex.site'
 
-// Device IDs from the impartial-whale-32 deployment (OR-3 devices)
+// Device IDs from the adept-wren-805 deployment (OR-3 devices)
 export const DEVICE_IDS = {
-  UV_ROBOT: 'jd71dxprgfe2c1m191bt6a79g98225x2',
-  TUG_ROBOT: 'jd70sm9tht7kq7p0t20n22ptrn822tn5',
-  ENV_MONITORING: 'jd79481zr4jt3pggjebcf7y2nn823cp5',
-  SCHEDULING: 'jd7d79sep5x1q0hmetevhmcnbx8231js',
+  UV_ROBOT: 'jd73ve7m965tg28kbcffs4nhh582253p',
+  TUG_ROBOT: 'jd79jwzj5893812hkgf68dz3vh822aa2',
+  ENV_MONITORING: 'jd7a1249k2xq68q6b7yxwh9vnx822d6b',
+  SCHEDULING: 'jd7drsdfe5h2d9hq06ap95gx9d82244t',
 } as const
 
-// Room IDs
+// Room IDs from the adept-wren-805 deployment
 export const ROOM_IDS = {
-  OR_1: 'jn77dth55k7d2600v9hx3dbk4s822646',
-  OR_2: 'jn78nfx1s528tz8cknq4c8g44d823yvv',
-  OR_3: 'jn7bw19xt7a818kvh3w5dhxvvd823j8a',
-  OR_4: 'jn7caae78h5qg7pthmzav3yx4n8224ee',
+  OR_1: 'jn7awk9w6aa5jwwgk0j4127mqs823ryx',
+  OR_2: 'jn73s1j1vfh59gn5tnwh2yxqtd822cty',
+  OR_3: 'jn78kamvzt5ha8qscg8kd7esqx823etw',
+  OR_4: 'jn7fnajq8wddgen4chq4r3asn982353h',
 } as const
 
 export type DeviceStatus = 'idle' | 'configuring' | 'ready' | 'error'
