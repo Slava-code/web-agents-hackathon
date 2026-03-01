@@ -76,13 +76,14 @@ export default function UVRobotPortal() {
     if (cycleActive && progress < 100) {
       interval = setInterval(() => {
         setProgress((prev) => {
-          if (prev >= 100) {
+          const next = prev + 2
+          if (next >= 100) {
             setCycleActive(false)
             setCycleHistory((h) => [
               {
                 id: `CYC-${2848 + h.length}`,
                 room: selectedRoom,
-                duration: '12:00',
+                duration: '20:00',
                 status: 'Complete',
                 timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
               },
@@ -102,9 +103,9 @@ export default function UVRobotPortal() {
                 lastAction: 'completed'
               }
             })
-            return 0
+            return 100
           }
-          return prev + 2
+          return next
         })
       }, 400)
     }
