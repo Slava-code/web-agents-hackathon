@@ -17,96 +17,113 @@ public class ConvexManager : MonoBehaviour
     [Tooltip("Your Convex deployment URL, e.g. https://your-project-123.convex.cloud")]
     public string convexUrl = "https://YOUR_DEPLOYMENT.convex.cloud";
 
+    [Tooltip("Room ID to poll state for")]
+    public string roomId = "";
+
     [Tooltip("How often to poll for updates (seconds)")]
     public float pollInterval = 0.5f;
 
     // Events that other scripts subscribe to
     public static event Action<DeviceState[]> OnDevicesUpdated;
-    public static event Action<ActivityLogEntry[]> OnActivityUpdated;
+    public static event Action<EnvironmentReading[]> OnActivityUpdated;
     public static event Action<string> OnDeviceStatusChanged;
 
     // Current state (other scripts can read this directly)
     public static Dictionary<string, DeviceState> Devices = new Dictionary<string, DeviceState>();
-    public static List<ActivityLogEntry> RecentActivity = new List<ActivityLogEntry>();
+    public static List<EnvironmentReading> RecentReadings = new List<EnvironmentReading>();
 
     private Dictionary<string, string> previousStatuses = new Dictionary<string, string>();
 
+    // Status mapping from Convex values to Unity values
+    private static readonly Dictionary<string, string> StatusMap = new Dictionary<string, string>
+    {
+        { "idle", "idle" },
+        { "configuring", "active" },
+        { "ready", "complete" },
+        { "error", "error" },
+    };
+
     void Start()
     {
-        StartCoroutine(PollDevices());
-        StartCoroutine(PollActivity());
+        StartCoroutine(PollRoomState());
     }
 
-    IEnumerator PollDevices()
+    IEnumerator PollRoomState()
     {
         while (true)
         {
-            yield return StartCoroutine(QueryConvex("queries:getAllDevices", "{}", (json) =>
+            if (!string.IsNullOrEmpty(roomId))
             {
-                var wrapper = JsonUtility.FromJson<DeviceArrayWrapper>("{\"devices\":" + json + "}");
-                if (wrapper?.devices != null)
+                string url = $"{convexUrl}/room-state?roomId={UnityWebRequest.EscapeURL(roomId)}";
+
+                using (UnityWebRequest request = UnityWebRequest.Get(url))
                 {
-                    foreach (var device in wrapper.devices)
+                    yield return request.SendWebRequest();
+
+                    if (request.result == UnityWebRequest.Result.Success)
                     {
-                        if (previousStatuses.ContainsKey(device.deviceId) &&
-                            previousStatuses[device.deviceId] != device.status)
-                        {
-                            OnDeviceStatusChanged?.Invoke(device.deviceId);
-                        }
-                        previousStatuses[device.deviceId] = device.status;
-                        Devices[device.deviceId] = device;
+                        string json = request.downloadHandler.text;
+                        ParseRoomState(json);
                     }
-                    OnDevicesUpdated?.Invoke(wrapper.devices);
+                    else
+                    {
+                        Debug.LogWarning($"Room state poll failed: {request.error}");
+                    }
                 }
-            }));
+            }
+
             yield return new WaitForSeconds(pollInterval);
         }
     }
 
-    IEnumerator PollActivity()
+    void ParseRoomState(string json)
     {
-        while (true)
+        var response = JsonUtility.FromJson<RoomStateResponse>(json);
+        if (response == null) return;
+
+        // --- Devices ---
+        if (response.devices != null)
         {
-            yield return StartCoroutine(QueryConvex("queries:getRecentActivity", "{}", (json) =>
+            var mapped = new List<DeviceState>();
+            foreach (var raw in response.devices)
             {
-                var wrapper = JsonUtility.FromJson<ActivityArrayWrapper>("{\"entries\":" + json + "}");
-                if (wrapper?.entries != null)
+                var device = new DeviceState
                 {
-                    RecentActivity = new List<ActivityLogEntry>(wrapper.entries);
-                    OnActivityUpdated?.Invoke(wrapper.entries);
+                    deviceId = raw._id,
+                    name = raw.name,
+                    vendor = raw.category,
+                    dashboardUrl = raw.url,
+                    status = MapStatus(raw.status),
+                    statusDetail = raw.currentAction ?? "",
+                    progress = raw.status == "ready" ? 100f : 0f,
+                    lastUpdated = raw.updatedAt,
+                };
+                mapped.Add(device);
+
+                if (previousStatuses.ContainsKey(device.deviceId) &&
+                    previousStatuses[device.deviceId] != device.status)
+                {
+                    OnDeviceStatusChanged?.Invoke(device.deviceId);
                 }
-            }));
-            yield return new WaitForSeconds(pollInterval);
+                previousStatuses[device.deviceId] = device.status;
+                Devices[device.deviceId] = device;
+            }
+            OnDevicesUpdated?.Invoke(mapped.ToArray());
+        }
+
+        // --- Environment Readings ---
+        if (response.environmentReadings != null)
+        {
+            RecentReadings = new List<EnvironmentReading>(response.environmentReadings);
+            OnActivityUpdated?.Invoke(response.environmentReadings);
         }
     }
 
-    IEnumerator QueryConvex(string functionName, string argsJson, Action<string> onSuccess)
+    static string MapStatus(string convexStatus)
     {
-        string url = $"{convexUrl}/api/query";
-        string body = $"{{\"path\":\"{functionName}\",\"args\":{{}}}}";
-
-        using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
-        {
-            byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(body);
-            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-            request.downloadHandler = new DownloadHandlerBuffer();
-            request.SetRequestHeader("Content-Type", "application/json");
-
-            yield return request.SendWebRequest();
-
-            if (request.result == UnityWebRequest.Result.Success)
-            {
-                var response = JsonUtility.FromJson<ConvexResponse>(request.downloadHandler.text);
-                if (response != null && response.status == "success")
-                {
-                    onSuccess?.Invoke(response.value);
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"Convex query failed: {request.error}");
-            }
-        }
+        if (convexStatus != null && StatusMap.TryGetValue(convexStatus, out string mapped))
+            return mapped;
+        return convexStatus ?? "idle";
     }
 
     // ---- Data Classes ----
@@ -123,13 +140,6 @@ public class ConvexManager : MonoBehaviour
     }
 
     [Serializable]
-    public class ConvexResponse
-    {
-        public string status;
-        public string value;
-    }
-
-    [Serializable]
     public class DeviceState
     {
         public string deviceId;
@@ -143,17 +153,54 @@ public class ConvexManager : MonoBehaviour
     }
 
     [Serializable]
-    public class ActivityLogEntry
+    public class EnvironmentReading
     {
+        public string _id;
+        public string roomId;
+        public float temperature;
+        public float humidity;
+        public float bacterialConcentration;
+        public float co2;
+        public float oxygen;
+        public float particulateCount;
+        public float pressureDifferential;
+        public bool allWithinRange;
+        public string[] outOfRangeFields;
         public long timestamp;
-        public string deviceId;
-        public string action;
-        public string message;
+    }
+
+    // Intermediate class matching raw Convex device JSON fields
+    [Serializable]
+    public class RawDevice
+    {
+        public string _id;
+        public string name;
+        public string category;
+        public string roomId;
+        public string url;
+        public string status;
+        public string currentAction;
+        public string lastError;
+        public long updatedAt;
     }
 
     [Serializable]
-    public class DeviceArrayWrapper { public DeviceState[] devices; }
+    public class RoomInfo
+    {
+        public string _id;
+        public string name;
+        public string status;
+        public string procedure;
+        public int deviceCount;
+        public int devicesReady;
+        public long updatedAt;
+    }
 
     [Serializable]
-    public class ActivityArrayWrapper { public ActivityLogEntry[] entries; }
+    public class RoomStateResponse
+    {
+        public RoomInfo room;
+        public RawDevice[] devices;
+        public EnvironmentReading[] environmentReadings;
+    }
 }
