@@ -41,3 +41,6 @@ next-env.d.ts
 venv/
 __pycache__/
 *.pyc
+
+# learned site configs (runtime data)
+data/sites/*.json

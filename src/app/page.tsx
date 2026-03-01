@@ -69,7 +69,24 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="mt-12 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
+        <div className="mt-8">
+          <Link href="/agent" className="group block">
+            <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-6 border border-blue-500/30 hover:border-blue-400/50 transition-all">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-2 w-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500" />
+                <span className="text-xs font-medium text-blue-400 uppercase tracking-wider">Browser Agent</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors">
+                Run Browser Agent
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Use browser-use to navigate any dashboard, extract data, and view the agent live.
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        <div className="mt-6 p-6 bg-slate-800/50 rounded-xl border border-slate-700">
           <h3 className="text-lg font-semibold text-white mb-2">For Browser Agents</h3>
           <p className="text-slate-400 text-sm">
             Each dashboard has real interactive HTML elements (buttons, inputs, sliders, dropdowns).
