@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
 import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import { useConvexSync } from '@/hooks/useConvexSync'
 import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 interface Patient {
@@ -152,6 +153,33 @@ export default function EHRSystem() {
       }
     }))
   }, [convexState.status, convexState.fields, convexState.isLoading])
+
+  // Auto-sync room state to Convex
+  const or1 = rooms.find(r => r.id === 'OR-1')
+  const or2 = rooms.find(r => r.id === 'OR-2')
+  const or3 = rooms.find(r => r.id === 'OR-3')
+  const or4 = rooms.find(r => r.id === 'OR-4')
+  const activeRoom = rooms.find(r => r.id === selectedRoom)
+  const nextPatient = activeRoom?.nextPatient || activeRoom?.currentPatient
+  const ehrSyncFields = useMemo(() => ({
+    hospitalName: 'Memorial General Hospital',
+    unitName: 'Main OR',
+    activeRoomTitle: activeRoom?.name ?? '',
+    activeRoomStatus: activeRoom?.status ?? '',
+    turnoverTime: activeRoom?.turnoverStarted ?? '',
+    patientName: nextPatient?.name ?? '',
+    mrn: nextPatient?.mrn ?? '',
+    procedure: nextPatient?.procedure ?? '',
+    surgeon: nextPatient?.surgeon ?? '',
+    duration: nextPatient?.estimatedDuration ?? '',
+    anesthesia: nextPatient?.anesthesia ?? '',
+    allergies: nextPatient?.allergies?.join(', ') ?? '',
+    roomStatus_OR1: or1?.status ?? '',
+    roomStatus_OR2: or2?.status ?? '',
+    roomStatus_OR3: or3?.status ?? '',
+    roomStatus_OR4: or4?.status ?? '',
+  }), [rooms, selectedRoom, activeRoom, nextPatient, or1, or2, or3, or4])
+  useConvexSync(DEVICE_IDS.SCHEDULING, ehrSyncFields)
 
   const currentRoom = rooms.find(r => r.id === selectedRoom)!
 

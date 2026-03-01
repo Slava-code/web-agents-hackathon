@@ -403,43 +403,6 @@ export default function AgentPage() {
     }
   }
 
-  // ─── Demo handler ──────────────────────────────────────────────
-
-  const handleDemo = async () => {
-    resetState()
-    setIsRunning(true)
-    setWatchActive(true)
-    setStatus('watching')
-
-    const controller = new AbortController()
-    abortRef.current = controller
-
-    try {
-      const res = await fetch('/api/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intervalMs: 8000 }),
-        signal: controller.signal,
-      })
-
-      if (!res.ok) {
-        const errorBody = await res.text().catch(() => '')
-        setError(`Demo failed: ${res.status} — ${errorBody || res.statusText}`)
-        setIsRunning(false)
-        setWatchActive(false)
-        return
-      }
-
-      await consumeStream(res)
-    } catch (e: unknown) {
-      if (!(e instanceof DOMException && e.name === 'AbortError')) {
-        setError(e instanceof Error ? e.message : String(e))
-      }
-      setIsRunning(false)
-      setWatchActive(false)
-    }
-  }
-
   // ─── Custom handler ───────────────────────────────────────────────
 
   const handleCustom = async () => {
@@ -814,51 +777,70 @@ export default function AgentPage() {
 
             {/* ── Watch Tab ──────────────────────────────────── */}
             {tab === 'watch' && (
-              <div>
-                {/* Watch All Devices */}
-                <div className="p-4 pb-2">
-                  <button
-                    onClick={handleDemo}
-                    disabled={isRunning}
-                    className="w-full px-4 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 disabled:from-slate-600 disabled:to-slate-600 disabled:cursor-not-allowed rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2"
-                  >
-                    {isRunning ? (
-                      <>
-                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        Watching All Devices...
-                      </>
-                    ) : (
-                      'Watch All Devices'
-                    )}
-                  </button>
-                  {isRunning && (
-                    <button
-                      onClick={handleStop}
-                      className="w-full mt-2 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-medium transition-colors"
-                    >
-                      Stop
-                    </button>
-                  )}
-                  <p className="text-xs text-slate-500 mt-2 text-center">
-                    Monitors all 4 devices and pushes changes to Convex
+              <div className="p-4 space-y-4">
+                {/* Active Monitoring Status */}
+                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-sm font-semibold text-emerald-400">Live Monitoring Active</span>
+                  </div>
+                  <p className="text-xs text-slate-400">
+                    All dashboard pages automatically sync state changes to Convex in real-time.
+                    Open any device page and make changes — they push to Convex within 300ms.
                   </p>
                 </div>
 
-                <div className="px-4 py-2">
-                  <div className="border-t border-slate-700 pt-2">
-                    <p className="text-xs text-slate-500 text-center mb-1">Or watch a specific route:</p>
+                {/* Device Links */}
+                <div>
+                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Monitored Devices</h3>
+                  <div className="space-y-2">
+                    {[
+                      { name: 'UV-C Disinfection Robot', path: '/uv-robot', color: 'text-violet-400' },
+                      { name: 'Environmental Monitoring', path: '/environmental', color: 'text-cyan-400' },
+                      { name: 'TUG Fleet Monitor', path: '/tug-robot', color: 'text-emerald-400' },
+                      { name: 'Room Scheduling (EHR)', path: '/ehr', color: 'text-blue-400' },
+                    ].map((device) => (
+                      <a
+                        key={device.path}
+                        href={device.path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg p-3 hover:border-slate-500 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <span className={`text-sm font-medium ${device.color}`}>{device.name}</span>
+                        </div>
+                        <span className="text-xs text-slate-500 font-mono">{device.path}</span>
+                      </a>
+                    ))}
                   </div>
                 </div>
 
-                <SiteRouteSelector
-                  actionLabel={watchActive ? 'Watching...' : 'Start Watch'}
-                  onAction={handleWatch}
-                  buttonColor="bg-emerald-600 hover:bg-emerald-500"
-                />
+                {/* How It Works */}
+                <div className="border-t border-slate-700 pt-4">
+                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">How It Works</h3>
+                  <div className="space-y-2 text-xs text-slate-500">
+                    <p>1. Browser-use agents learned each dashboard and generated extraction scripts</p>
+                    <p>2. Scripts monitor the DOM for state changes on each device page</p>
+                    <p>3. Changes are pushed to Convex within 300ms via field-update API</p>
+                    <p>4. Unity reads from Convex and updates the 3D operating room in real-time</p>
+                  </div>
+                </div>
+
+                {/* Browser-use Watch (single route) */}
+                <div className="border-t border-slate-700 pt-4">
+                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Browser-Use Watch (Single Route)</h3>
+                  <SiteRouteSelector
+                    actionLabel={watchActive ? 'Watching...' : 'Start Watch'}
+                    onAction={handleWatch}
+                    buttonColor="bg-emerald-600 hover:bg-emerald-500"
+                  />
+                </div>
 
                 {/* Watch Status Dashboard */}
                 {watchActive && (
-                  <div className="px-4 pb-3 space-y-3">
+                  <div className="space-y-3">
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
                         <div className="flex items-center justify-center gap-1.5 mb-1">
@@ -883,7 +865,7 @@ export default function AgentPage() {
 
                 {/* Change Log */}
                 {watchChanges.length > 0 && (
-                  <div className="px-4 pb-3 space-y-2">
+                  <div className="space-y-2">
                     <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Change Log</h3>
                     <div className="max-h-[300px] overflow-auto space-y-2">
                       {watchChanges.slice().reverse().map((change, i) => (

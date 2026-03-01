@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
 import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import { useConvexSync } from '@/hooks/useConvexSync'
 import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 type BotStatus = 'IDLE' | 'EN_ROUTE' | 'ARRIVED' | 'RETURNING'
@@ -135,6 +136,29 @@ export default function TUGDashboard() {
 
   const activeBots = bots.filter(b => b.status !== 'IDLE').length
   const totalTripsToday = 47
+
+  // Auto-sync bot state to Convex
+  const tugSyncFields = useMemo(() => ({
+    activeCount: `${activeBots} / ${bots.length}`,
+    tripCount: String(totalTripsToday),
+    bot1_id: bots[0]?.id ?? '',
+    bot1_status: bots[0]?.status ?? '',
+    bot1_source: bots[0]?.source ?? '',
+    bot1_battery: `${bots[0]?.battery ?? 0}%`,
+    bot2_id: bots[1]?.id ?? '',
+    bot2_status: bots[1]?.status ?? '',
+    bot2_source: bots[1]?.source ?? '',
+    bot2_battery: `${bots[1]?.battery ?? 0}%`,
+    bot3_id: bots[2]?.id ?? '',
+    bot3_status: bots[2]?.status ?? '',
+    bot3_source: bots[2]?.source ?? '',
+    bot3_battery: `${bots[2]?.battery ?? 0}%`,
+    bot4_id: bots[3]?.id ?? '',
+    bot4_status: bots[3]?.status ?? '',
+    bot4_source: bots[3]?.source ?? '',
+    bot4_battery: `${bots[3]?.battery ?? 0}%`,
+  }), [bots, activeBots])
+  useConvexSync(DEVICE_IDS.TUG_ROBOT, tugSyncFields)
 
   return (
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'IBM Plex Sans', -apple-system, sans-serif" }}>

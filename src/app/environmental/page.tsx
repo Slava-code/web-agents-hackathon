@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
 import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import { useConvexSync } from '@/hooks/useConvexSync'
 import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 interface Sensor {
@@ -118,6 +119,27 @@ export default function EnvironmentalMonitoring() {
   const warningSensors = sensors.filter(s => s.status === 'warning').length
   const highRiskSensors = sensors.filter(s => s.riskLevel === 'high').length
   const activeAlerts = alerts.filter(a => !a.acknowledged).length
+
+  // Auto-sync sensor data to Convex
+  const env001 = sensors.find(s => s.id === 'ENV-001')
+  const env003 = sensors.find(s => s.id === 'ENV-003')
+  const envSyncFields = useMemo(() => ({
+    totalSensors: String(totalSensors),
+    onlineSensors: String(onlineSensors),
+    warningSensors: String(warningSensors),
+    offlineSensors: String(offlineSensors),
+    highRiskSensors: String(highRiskSensors),
+    activeAlerts: String(activeAlerts),
+    sensor_ENV001_pm25: String(env001?.particulate ?? 0),
+    sensor_ENV001_temp: `${env001?.temperature ?? 0}°F`,
+    sensor_ENV001_co2: String(env001?.co2 ?? 0),
+    sensor_ENV003_pm25: String(env003?.particulate ?? 0),
+    sensor_ENV003_temp: `${env003?.temperature ?? 0}°F`,
+    sensor_ENV003_co2: String(env003?.co2 ?? 0),
+    threshold_particulate: String(thresholds.particulate),
+    threshold_co2: String(thresholds.co2),
+  }), [totalSensors, onlineSensors, warningSensors, offlineSensors, highRiskSensors, activeAlerts, env001, env003, thresholds])
+  useConvexSync(DEVICE_IDS.ENV_MONITORING, envSyncFields)
 
   // Sensor categories
   const sensorsByType = sensors.reduce((acc, s) => {

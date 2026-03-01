@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
 import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import { useConvexSync } from '@/hooks/useConvexSync'
 import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 export default function UVRobotPortal() {
@@ -24,6 +25,24 @@ export default function UVRobotPortal() {
   const [lampHours, setLampHours] = useState(1247)
 
   const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "UV Robot")
+
+  // Auto-sync all state to Convex on any change
+  const syncFields = useMemo(() => ({
+    selectedRoom,
+    cycleActive: String(cycleActive),
+    progress: String(progress),
+    intensity: String(intensity),
+    mode,
+    batteryLevel: `${batteryLevel}%`,
+    connectionStatus,
+    deviceHealth,
+    lampHours: String(lampHours),
+    cycleStatus: cycleActive ? 'disinfecting' : progress === 0 ? 'standby' : 'complete',
+    displayRoom: selectedRoom,
+    displayMode: mode,
+    displayIntensity: `${intensity}%`,
+  }), [selectedRoom, cycleActive, progress, intensity, mode, batteryLevel, connectionStatus, deviceHealth, lampHours])
+  useConvexSync(DEVICE_IDS.UV_ROBOT, syncFields)
 
   // Sync Convex fields → local state when device is actively being controlled
   useEffect(() => {
