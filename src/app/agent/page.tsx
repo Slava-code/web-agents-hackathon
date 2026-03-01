@@ -785,8 +785,8 @@ export default function AgentPage() {
                     <span className="text-sm font-semibold text-emerald-400">Live Monitoring Active</span>
                   </div>
                   <p className="text-xs text-slate-400">
-                    All dashboard pages automatically sync state changes to Convex in real-time.
-                    Open any device page and make changes — they push to Convex within 300ms.
+                    Extraction scripts are running on each device dashboard.
+                    Any state change is detected and pushed to Convex within 300ms.
                   </p>
                 </div>
 
@@ -819,7 +819,7 @@ export default function AgentPage() {
 
                 {/* How It Works */}
                 <div className="border-t border-slate-700 pt-4">
-                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">How It Works</h3>
+                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Pipeline</h3>
                   <div className="space-y-2 text-xs text-slate-500">
                     <p>1. Browser-use agents learned each dashboard and generated extraction scripts</p>
                     <p>2. Scripts monitor the DOM for state changes on each device page</p>
@@ -827,80 +827,6 @@ export default function AgentPage() {
                     <p>4. Unity reads from Convex and updates the 3D operating room in real-time</p>
                   </div>
                 </div>
-
-                {/* Browser-use Watch (single route) */}
-                <div className="border-t border-slate-700 pt-4">
-                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Browser-Use Watch (Single Route)</h3>
-                  <SiteRouteSelector
-                    actionLabel={watchActive ? 'Watching...' : 'Start Watch'}
-                    onAction={handleWatch}
-                    buttonColor="bg-emerald-600 hover:bg-emerald-500"
-                  />
-                </div>
-
-                {/* Watch Status Dashboard */}
-                {watchActive && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5 mb-1">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-xs text-slate-400 uppercase">Heartbeats</span>
-                        </div>
-                        <span className="text-lg font-mono text-emerald-400">{watchHeartbeats}</span>
-                      </div>
-                      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
-                        <div className="text-xs text-slate-400 uppercase mb-1">Changes</div>
-                        <span className={`text-lg font-mono ${watchChanges.length > 0 ? 'text-yellow-400' : 'text-slate-400'}`}>
-                          {watchChanges.length}
-                        </span>
-                      </div>
-                      <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center">
-                        <div className="text-xs text-slate-400 uppercase mb-1">Cost</div>
-                        <span className="text-lg font-mono text-green-400">${watchTotalCost.toFixed(4)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Change Log */}
-                {watchChanges.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider">Change Log</h3>
-                    <div className="max-h-[300px] overflow-auto space-y-2">
-                      {watchChanges.slice().reverse().map((change, i) => (
-                        <div key={i} className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-yellow-400 font-medium">
-                              Iteration #{change.iteration}
-                            </span>
-                            <span className="text-xs text-slate-500">
-                              {new Date(change.timestamp).toLocaleTimeString()}
-                            </span>
-                          </div>
-                          {Object.entries(change.diff.changed).map(([key, val]) => (
-                            <div key={key} className="text-xs font-mono">
-                              <span className="text-yellow-400">{key}</span>
-                              {': '}
-                              <span className="text-red-400 line-through">{JSON.stringify(val.old)}</span>
-                              {' → '}
-                              <span className="text-green-400">{JSON.stringify(val.new)}</span>
-                            </div>
-                          ))}
-                          {Object.entries(change.diff.added).map(([key, val]) => (
-                            <div key={key} className="text-xs font-mono">
-                              <span className="text-green-400">+ {key}</span>
-                              <span className="text-slate-400 ml-2">{JSON.stringify(val)}</span>
-                            </div>
-                          ))}
-                          {change.diff.removed.map((key) => (
-                            <div key={key} className="text-xs font-mono text-red-400">- {key}</div>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
 
