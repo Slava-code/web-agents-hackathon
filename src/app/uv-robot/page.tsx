@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
+import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 export default function UVRobotPortal() {
   const [selectedRoom, setSelectedRoom] = useState('OR-1')
@@ -20,6 +22,17 @@ export default function UVRobotPortal() {
   const [mode, setMode] = useState<'standard' | 'high' | 'terminal'>('standard')
   const [currentTime, setCurrentTime] = useState(new Date())
   const [lampHours, setLampHours] = useState(1247)
+
+  const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "UV Robot")
+
+  // Sync Convex fields → local state when device is actively being controlled
+  useEffect(() => {
+    if (convexState.isLoading || convexState.status === 'idle') return
+    const f = convexState.fields
+    if (f.intensity !== undefined) setIntensity(f.intensity as number)
+    if (f.mode !== undefined) setMode(f.mode as 'standard' | 'high' | 'terminal')
+    if (f.currentRoom !== undefined) setSelectedRoom(f.currentRoom as string)
+  }, [convexState.fields, convexState.status, convexState.isLoading])
 
   const rooms = ['OR-1', 'OR-2', 'OR-3', 'OR-4', 'OR-5', 'PACU-1', 'PACU-2', 'Pre-Op-1']
 
@@ -235,6 +248,7 @@ export default function UVRobotPortal() {
       `}</style>
 
       <div className="min-h-screen bg-[var(--white)] font-sans text-[var(--black)]">
+        <ConvexStatusBadge state={convexState} />
         {/* Minimal Header */}
         <header className="border-b hairline border-[var(--warm-gray)] bg-[var(--white)]">
           <div className="max-w-[1600px] mx-auto px-8 py-6 flex items-end justify-between">

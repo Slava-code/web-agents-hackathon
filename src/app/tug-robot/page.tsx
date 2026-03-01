@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
+import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 type BotStatus = 'IDLE' | 'EN_ROUTE' | 'ARRIVED' | 'RETURNING'
 
@@ -26,6 +28,7 @@ export default function TUGDashboard() {
     { id: 'TUG-04', name: 'Delta', status: 'RETURNING', progress: 80, source: 'OR-4', destination: 'Sterilization', battery: 55 },
   ])
 
+  const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "TUG Fleet Monitor")
   const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
@@ -125,6 +128,7 @@ export default function TUGDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50" style={{ fontFamily: "'IBM Plex Sans', -apple-system, sans-serif" }}>
+      <ConvexStatusBadge state={convexState} />
       {/* Header */}
       <header className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-4">
