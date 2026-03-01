@@ -1,20 +1,19 @@
-const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://hardy-gnat-785.convex.site'
+const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://impartial-whale-32.convex.site'
 
-// Device IDs from seed data (adept-wren-805 / hardy-gnat-785 deployments)
+// Device IDs from seed data
 export const DEVICE_IDS = {
-  UV_ROBOT: 'jd73ve7m965tg28kbcffs4nhh582253p',
-  TUG_ROBOT: 'jd79jwzj5893812hkgf68dz3vh822aa2',
-  ENV_MONITORING: 'jd7a1249k2xq68q6b7yxwh9vnx822d6b',
-  SCHEDULING: 'jd7drsdfe5h2d9hq06ap95gx9d82244t',
-  SURVEILLANCE: 'jd7b0y7js7c8ye7064bfqys81h8229e2',
+  UV_ROBOT: 'jd7cqtha5g02w3j8wvxmkw99sn823wp4',
+  TUG_ROBOT: 'jd76jfecjtdk5cfxr2tq4yqcvs82205j',
+  ENV_MONITORING: 'jd7bxx26d46v0d7qztryy0t2g982203v',
+  SCHEDULING: 'jd7ba2pye0440ykdxbx5nwmrkd823wf5',
 } as const
 
 // Room IDs
 export const ROOM_IDS = {
-  OR_1: 'jn7awk9w6aa5jwwgk0j4127mqs823ryx',
-  OR_2: 'jn73s1j1vfh59gn5tnwh2yxqtd822cty',
-  OR_3: 'jn78kamvzt5ha8qscg8kd7esqx823etw',
-  OR_4: 'jn7fnajq8wddgen4chq4r3asn982353h',
+  OR_1: 'jn70vyej1ssfpz8j5z0wbr0mpx8235ps',
+  OR_2: 'jn73wbqvq0qe3hn1jg0vk7anch8233ek',
+  OR_3: 'jn7fhfe0y6thhrrsz90w9e7wcn8236z2',
+  OR_4: 'jn79nstv8rwxjdqs0qxbmhjsjd8238pb',
 } as const
 
 export type DeviceStatus = 'idle' | 'configuring' | 'ready' | 'error'
