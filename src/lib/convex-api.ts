@@ -2,19 +2,16 @@ const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://impa
 
 // Device IDs from seed data
 export const DEVICE_IDS = {
-  UV_ROBOT: 'jd74zb957j4a83r2q1y5zxjwsh8237by',
-  ENV_MONITORING: 'jd7a5wdr3kc9p7krjep93paptn8235qk',
-  TUG_ROBOT: 'jd7eh4r1c2fxc3rq1axt30zha5823x6m', // was Sterilizer
-  SCHEDULING: 'jd7ekvwvtgs4y560qmr61983v1823ewy',
-  VARIABLE_TRACKER: 'jd79cdv4fn4d2jyk562vhtz0p58226e8', // was Surveillance
+  UV_ROBOT: 'jd72bxwjgw87028ccbp6zzmaes823nys',
+  TUG_ROBOT: 'jd74ec16aby2rbteq1rwjcc0t1822pfx',
 } as const
 
 // Room IDs
 export const ROOM_IDS = {
-  OR_1: 'jn79y9jj2g38wjmv81vmhweq4n823s1x',
-  OR_2: 'jn75c2eryk3rm98y3q7d4vtmd9823zbn',
-  OR_3: 'jn7ewfpj0keefnvbt5c9s9wcws822edy',
-  OR_4: 'jn7etvj27d8rmsrdj50trkwz0n823v78',
+  OR_1: 'jn74ng7t47dm867bf9ysewzx61823jcd',
+  OR_2: 'jn7dyd2x59n44q4bwxve0ghk3h822kr2',
+  OR_3: 'jn7fbnzdjjxxsq1c5v03ptq2hx822h41',
+  OR_4: 'jn7e11r2yq5mfbyz7v1x1e81wn823gmj',
 } as const
 
 export type DeviceStatus = 'idle' | 'configuring' | 'ready' | 'error'
