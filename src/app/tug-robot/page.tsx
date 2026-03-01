@@ -201,8 +201,8 @@ export default function TUGDashboard() {
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase tracking-wide">
-            <div className="col-span-2">Unit</div>
-            <div className="col-span-1">Status</div>
+            <div className="col-span-1">Unit</div>
+            <div className="col-span-2">Status</div>
             <div className="col-span-2">Source</div>
             <div className="col-span-4">Progress</div>
             <div className="col-span-1">Battery</div>
@@ -218,13 +218,13 @@ export default function TUGDashboard() {
                 className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 last:border-0 items-center hover:bg-slate-50 transition-colors"
               >
                 {/* Unit */}
-                <div className="col-span-2">
+                <div className="col-span-1">
                   <p className="font-semibold text-slate-900" data-testid={`bot-id-${bot.id}`}>{bot.id}</p>
                   <p className="text-xs text-slate-400">{bot.name}</p>
                 </div>
 
                 {/* Status */}
-                <div className="col-span-1">
+                <div className="col-span-2">
                   <span
                     className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium"
                     style={{ background: getStatusBg(bot.status), color: getStatusColor(bot.status) }}
