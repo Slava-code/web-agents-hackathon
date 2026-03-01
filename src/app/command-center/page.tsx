@@ -4,8 +4,10 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { Id } from '../../../convex/_generated/dataModel'
 import { ROOM_IDS } from '../../lib/convex-api'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+
+// ─── Constants ────────────────────────────────────────────────────────
 
 const CONVEX_SITE_URL =
   process.env.NEXT_PUBLIC_CONVEX_SITE_URL ||
@@ -42,6 +44,52 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
   needs_attention: 'border-red-500/50 text-red-400 bg-red-500/10',
 }
 
+const BROWSER_STATUS_COLORS: Record<string, string> = {
+  idle: 'bg-slate-500',
+  starting: 'bg-yellow-500 animate-pulse',
+  created: 'bg-yellow-500 animate-pulse',
+  running: 'bg-blue-500 animate-pulse',
+  complete: 'bg-green-500',
+  stopped: 'bg-orange-500',
+  error: 'bg-red-500',
+}
+
+// ─── Types ────────────────────────────────────────────────────────────
+
+type BrowserEventData =
+  | { type: 'session'; id: string; status: string; liveUrl: string | null }
+  | { type: 'status'; status: string; output: string | null; cost: string | null }
+  | { type: 'done'; status: string; output: string | null; cost: string | null }
+  | { type: 'error'; message: string }
+
+interface BrowserEvent {
+  id: number
+  timestamp: number
+  data: BrowserEventData
+}
+
+interface ConvexFeedItem {
+  kind: 'convex'
+  id: string
+  timestamp: number
+  deviceName: string
+  action: string
+  reasoning: string | null
+  result: string
+}
+
+interface BrowserFeedItem {
+  kind: 'browser'
+  id: number
+  timestamp: number
+  message: string
+  detail?: string
+}
+
+type FeedEntry = ConvexFeedItem | BrowserFeedItem
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+
 function formatTimestamp(ts: number) {
   const d = new Date(ts)
   return d.toLocaleTimeString('en-US', {
@@ -60,28 +108,49 @@ function timeSince(ts: number) {
   return `${Math.floor(diff / 3600000)}h ago`
 }
 
+function formatBrowserEvent(data: BrowserEventData): { message: string; detail?: string } {
+  switch (data.type) {
+    case 'session':
+      return {
+        message: 'Browser session started',
+        detail: data.liveUrl ? 'Live viewer connected' : 'Waiting for live URL...',
+      }
+    case 'status':
+      return {
+        message: `Agent status: ${data.status}`,
+        detail: data.output ? data.output.slice(0, 120) : undefined,
+      }
+    case 'done':
+      return {
+        message: `Session complete${data.cost ? ` (cost: $${data.cost})` : ''}`,
+      }
+    case 'error':
+      return {
+        message: `Error: ${data.message}`,
+      }
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────
+
 export default function CommandCenter() {
+  // --- Convex state ---
   const [commandText, setCommandText] = useState('')
   const [triggerStatus, setTriggerStatus] = useState<string | null>(null)
   const feedRef = useRef<HTMLDivElement>(null)
 
-  // --- Convex subscriptions ---
   const roomState = useQuery(api.roomQueries.getRoomStatePublic, {
     roomId: OR3_ID,
   })
-
   const latestCommand = useQuery(api.commands.getLatest, {
     roomId: OR3_ID,
   })
-
   const actionLogs = useQuery(
     api.actionLogs.byCommand,
     latestCommand?._id ? { commandId: latestCommand._id } : 'skip'
   )
-
   const submitCommand = useMutation(api.commands.submit)
 
-  // Build device name lookup from room state
   const deviceNameMap: Record<string, string> = {}
   if (roomState?.devices) {
     for (const d of roomState.devices) {
@@ -89,12 +158,115 @@ export default function CommandCenter() {
     }
   }
 
+  // --- Browser agent state ---
+  const [browserRunning, setBrowserRunning] = useState(false)
+  const [liveUrl, setLiveUrl] = useState<string | null>(null)
+  const [browserEvents, setBrowserEvents] = useState<BrowserEvent[]>([])
+  const [browserStatus, setBrowserStatus] = useState<string>('idle')
+  const [browserCost, setBrowserCost] = useState<string | null>(null)
+  const [browserError, setBrowserError] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  let nextEventId = useRef(0)
+
+  // --- SSE stream consumer (simplified from /agent) ---
+  async function consumeStream(res: Response) {
+    if (!res.body) return
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        try {
+          const data = JSON.parse(line.slice(6)) as BrowserEventData
+          const id = nextEventId.current++
+          const timestamp = Date.now()
+
+          setBrowserEvents((prev) => [...prev, { id, timestamp, data }])
+
+          if (data.type === 'session') {
+            if (data.liveUrl) setLiveUrl(data.liveUrl)
+            setBrowserStatus(data.status)
+          } else if (data.type === 'status') {
+            setBrowserStatus(data.status)
+            if (data.cost) setBrowserCost(data.cost)
+          } else if (data.type === 'done') {
+            setBrowserStatus('complete')
+            if (data.cost) setBrowserCost(data.cost)
+            setBrowserRunning(false)
+          } else if (data.type === 'error') {
+            setBrowserError(data.message)
+            setBrowserStatus('error')
+            setBrowserRunning(false)
+          }
+        } catch {
+          /* skip malformed lines */
+        }
+      }
+    }
+  }
+
+  // --- Start browser session ---
+  async function startBrowserSession(task: string) {
+    setBrowserRunning(true)
+    setBrowserEvents([])
+    setLiveUrl(null)
+    setBrowserStatus('starting')
+    setBrowserCost(null)
+    setBrowserError(null)
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    try {
+      const res = await fetch('/api/browser-use', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const errorBody = await res.text().catch(() => '')
+        setBrowserError(`Browser agent failed: ${res.status} — ${errorBody || res.statusText}`)
+        setBrowserStatus('error')
+        setBrowserRunning(false)
+        return
+      }
+
+      await consumeStream(res)
+    } catch (e: unknown) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        setBrowserError(e instanceof Error ? e.message : String(e))
+        setBrowserStatus('error')
+      }
+      setBrowserRunning(false)
+    }
+  }
+
   // --- Handlers ---
   async function handleSubmitCommand(e: React.FormEvent) {
     e.preventDefault()
     if (!commandText.trim()) return
-    await submitCommand({ text: commandText.trim(), roomId: OR3_ID })
+    const text = commandText.trim()
     setCommandText('')
+    // Fire both: Convex command + browser session
+    await submitCommand({ text, roomId: OR3_ID })
+    startBrowserSession(text)
+  }
+
+  function handleStop() {
+    abortRef.current?.abort()
+    setBrowserRunning(false)
+    setBrowserStatus('stopped')
   }
 
   async function handleTriggerAnomaly(scenario: string) {
@@ -132,7 +304,50 @@ export default function CommandCenter() {
     setTimeout(() => setTriggerStatus(null), 2000)
   }
 
-  // Progress calculation
+  // --- Unified feed ---
+  const unifiedFeed = useMemo<FeedEntry[]>(() => {
+    const entries: FeedEntry[] = []
+
+    // Convex action logs
+    if (actionLogs) {
+      for (const log of actionLogs) {
+        entries.push({
+          kind: 'convex',
+          id: log._id,
+          timestamp: log.timestamp,
+          deviceName: deviceNameMap[log.deviceId] ?? log.deviceId,
+          action: log.action,
+          reasoning: log.reasoning ?? null,
+          result: log.result,
+        })
+      }
+    }
+
+    // Browser events
+    for (const ev of browserEvents) {
+      const { message, detail } = formatBrowserEvent(ev.data)
+      entries.push({
+        kind: 'browser',
+        id: ev.id,
+        timestamp: ev.timestamp,
+        message,
+        detail,
+      })
+    }
+
+    // Sort ascending (oldest first, newest at bottom)
+    entries.sort((a, b) => a.timestamp - b.timestamp)
+    return entries
+  }, [actionLogs, browserEvents, deviceNameMap])
+
+  // --- Auto-scroll feed ---
+  useEffect(() => {
+    if (feedRef.current) {
+      feedRef.current.scrollTop = feedRef.current.scrollHeight
+    }
+  }, [unifiedFeed])
+
+  // --- Progress ---
   const deviceCount = roomState?.room?.deviceCount ?? 0
   const devicesReady = latestCommand?.devicesReady ?? 0
   const progressPct = deviceCount > 0 ? (devicesReady / deviceCount) * 100 : 0
@@ -157,15 +372,78 @@ export default function CommandCenter() {
               </h1>
             </div>
           </div>
-          <div className="text-xs text-slate-500">
-            OR-3 &middot; {roomState?.room?.status?.toUpperCase() ?? 'LOADING'}
+          <div className="flex items-center gap-4">
+            {/* Browser agent status */}
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2 h-2 rounded-full ${BROWSER_STATUS_COLORS[browserStatus] || 'bg-slate-500'}`}
+              />
+              <span className="text-xs text-slate-500 capitalize">
+                Agent: {browserStatus}
+              </span>
+            </div>
+            {browserCost && (
+              <span className="text-xs text-slate-500">
+                Cost: <span className="text-green-400 font-mono">${browserCost}</span>
+              </span>
+            )}
+            <div className="w-px h-4 bg-slate-700" />
+            <div className="text-xs text-slate-500">
+              OR-3 &middot; {roomState?.room?.status?.toUpperCase() ?? 'LOADING'}
+            </div>
           </div>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ===== LEFT: Room Status Panel ===== */}
+        {/* ===== LEFT: Live Browser Viewer ===== */}
+        <section className="lg:col-span-7">
+          <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden relative">
+            {liveUrl ? (
+              <div className="relative">
+                <iframe
+                  src={liveUrl}
+                  className="w-full bg-black"
+                  style={{ height: 'calc(100vh - 340px)', minHeight: '400px' }}
+                  allow="clipboard-read; clipboard-write"
+                />
+                {browserRunning && (
+                  <div className="absolute top-3 right-3">
+                    <button
+                      onClick={handleStop}
+                      className="px-3 py-1.5 bg-red-600/90 hover:bg-red-500 text-white text-xs font-medium rounded-md transition-colors backdrop-blur-sm flex items-center gap-1.5"
+                    >
+                      <div className="w-2 h-2 rounded-sm bg-white" />
+                      Stop Agent
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-center bg-slate-950"
+                style={{ height: 'calc(100vh - 340px)', minHeight: '400px' }}
+              >
+                <div className="text-center text-slate-600">
+                  <div className="text-5xl mb-3 opacity-40">&#127760;</div>
+                  <p className="text-sm font-medium">Live browser will appear here</p>
+                  <p className="text-xs mt-1 text-slate-700">
+                    Submit a command to start the browser agent
+                  </p>
+                  {browserError && (
+                    <div className="mt-3 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-md text-xs text-red-400 max-w-xs mx-auto">
+                      {browserError}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ===== RIGHT: Room Status + Command + Controls ===== */}
         <section className="lg:col-span-5 space-y-4">
+          {/* Room Status Panel */}
           <div className="bg-slate-900 rounded-lg border border-slate-800 p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase">
@@ -228,10 +506,7 @@ export default function CommandCenter() {
               )}
             </div>
           </div>
-        </section>
 
-        {/* ===== RIGHT: Command & Controls ===== */}
-        <section className="lg:col-span-7 space-y-4">
           {/* Command Input */}
           <div className="bg-slate-900 rounded-lg border border-slate-800 p-5">
             <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-3">
@@ -247,9 +522,10 @@ export default function CommandCenter() {
               />
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-md transition-colors whitespace-nowrap"
+                disabled={browserRunning}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-md transition-colors whitespace-nowrap"
               >
-                Submit
+                {browserRunning ? 'Running...' : 'Submit'}
               </button>
             </form>
 
@@ -293,7 +569,7 @@ export default function CommandCenter() {
             )}
           </div>
 
-          {/* Anomaly Triggers */}
+          {/* Demo Controls */}
           <div className="bg-slate-900 rounded-lg border border-slate-800 p-5">
             <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-3">
               Demo Controls
@@ -330,16 +606,16 @@ export default function CommandCenter() {
           </div>
         </section>
 
-        {/* ===== BOTTOM: Live Reasoning Feed ===== */}
+        {/* ===== BOTTOM: Unified Live Activity Feed ===== */}
         <section className="lg:col-span-12">
           <div className="bg-slate-900 rounded-lg border border-slate-800 p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase">
-                Live Agent Feed
+                Live Activity Feed
               </h2>
               <div className="flex items-center gap-2 text-xs text-slate-600">
-                {actionLogs && actionLogs.length > 0 && (
-                  <span>{actionLogs.length} entries</span>
+                {unifiedFeed.length > 0 && (
+                  <span>{unifiedFeed.length} entries</span>
                 )}
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span>LIVE</span>
@@ -350,49 +626,14 @@ export default function CommandCenter() {
               ref={feedRef}
               className="max-h-96 overflow-y-auto space-y-1 scrollbar-thin"
             >
-              {actionLogs && actionLogs.length > 0 ? (
-                actionLogs.map((log) => (
-                  <div
-                    key={log._id}
-                    className="flex items-start gap-3 px-3 py-2 rounded-md bg-slate-800/40 border border-slate-800 hover:border-slate-700 transition-colors"
-                  >
-                    {/* Timestamp */}
-                    <span className="text-xs text-slate-600 whitespace-nowrap pt-0.5 tabular-nums">
-                      {formatTimestamp(log.timestamp)}
-                    </span>
-
-                    {/* Result indicator */}
-                    <div className="pt-1.5 flex-shrink-0">
-                      <div
-                        className={`w-2 h-2 rounded-full ${
-                          log.result === 'success'
-                            ? 'bg-emerald-500'
-                            : log.result === 'failure'
-                              ? 'bg-red-500'
-                              : 'bg-amber-400 animate-pulse'
-                        }`}
-                      />
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-medium text-blue-400 truncate">
-                          {deviceNameMap[log.deviceId] ?? log.deviceId}
-                        </span>
-                        <span className="text-xs text-slate-500">&middot;</span>
-                        <span className="text-xs text-slate-300 truncate">
-                          {log.action}
-                        </span>
-                      </div>
-                      {log.reasoning && (
-                        <div className="text-xs text-amber-300/80 italic bg-amber-500/5 border-l-2 border-amber-500/30 pl-2 py-0.5 mt-1 rounded-r">
-                          {log.reasoning}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
+              {unifiedFeed.length > 0 ? (
+                unifiedFeed.map((entry) =>
+                  entry.kind === 'convex' ? (
+                    <ConvexFeedEntry key={`c-${entry.id}`} entry={entry} />
+                  ) : (
+                    <BrowserFeedEntry key={`b-${entry.id}`} entry={entry} />
+                  )
+                )
               ) : (
                 <div className="text-center py-12 text-slate-600 text-sm">
                   {latestCommand
@@ -404,6 +645,72 @@ export default function CommandCenter() {
           </div>
         </section>
       </main>
+    </div>
+  )
+}
+
+// ─── Feed Sub-components ──────────────────────────────────────────────
+
+function ConvexFeedEntry({ entry }: { entry: ConvexFeedItem }) {
+  return (
+    <div className="flex items-start gap-3 px-3 py-2 rounded-md bg-slate-800/40 border border-slate-800 hover:border-slate-700 transition-colors">
+      <span className="text-xs text-slate-600 whitespace-nowrap pt-0.5 tabular-nums">
+        {formatTimestamp(entry.timestamp)}
+      </span>
+      <div className="pt-1.5 flex-shrink-0">
+        <div
+          className={`w-2 h-2 rounded-full ${
+            entry.result === 'success'
+              ? 'bg-emerald-500'
+              : entry.result === 'failure'
+                ? 'bg-red-500'
+                : 'bg-amber-400 animate-pulse'
+          }`}
+        />
+      </div>
+      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20 uppercase tracking-wider flex-shrink-0 mt-0.5">
+        Agent
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-0.5">
+          <span className="text-xs font-medium text-blue-400 truncate">
+            {entry.deviceName}
+          </span>
+          <span className="text-xs text-slate-500">&middot;</span>
+          <span className="text-xs text-slate-300 truncate">
+            {entry.action}
+          </span>
+        </div>
+        {entry.reasoning && (
+          <div className="text-xs text-amber-300/80 italic bg-amber-500/5 border-l-2 border-amber-500/30 pl-2 py-0.5 mt-1 rounded-r">
+            &ldquo;{entry.reasoning}&rdquo;
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function BrowserFeedEntry({ entry }: { entry: BrowserFeedItem }) {
+  return (
+    <div className="flex items-start gap-3 px-3 py-2 rounded-md bg-slate-800/40 border border-slate-800 hover:border-slate-700 transition-colors">
+      <span className="text-xs text-slate-600 whitespace-nowrap pt-0.5 tabular-nums">
+        {formatTimestamp(entry.timestamp)}
+      </span>
+      <div className="pt-1.5 flex-shrink-0">
+        <div className="w-2 h-2 rounded-full bg-cyan-400" />
+      </div>
+      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 uppercase tracking-wider flex-shrink-0 mt-0.5">
+        Browser
+      </span>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-slate-300">{entry.message}</div>
+        {entry.detail && (
+          <div className="text-xs text-slate-500 mt-0.5 truncate">
+            {entry.detail}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -80,7 +80,7 @@ export default function Home() {
                 Command Center
               </h3>
               <p className="text-slate-400 text-sm">
-                Issue commands, monitor room status, and watch live agent reasoning in real-time.
+                Issue commands, watch AI agents navigate dashboards live, and monitor room status in real-time.
               </p>
             </div>
           </Link>
@@ -95,7 +95,7 @@ export default function Home() {
                 Run Browser Agent
               </h3>
               <p className="text-slate-400 text-sm">
-                Use browser-use to navigate any dashboard, extract data, and view the agent live.
+                Developer tools: teach the agent about dashboard pages, configure monitoring.
               </p>
             </div>
           </Link>
