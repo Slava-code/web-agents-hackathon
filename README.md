@@ -1,4 +1,4 @@
-# Medical Device Vendor Dashboards
+# Medical Device Vendor Dashboards 
 
 A collection of 5 simulated medical device vendor web dashboards for OR (Operating Room) turnover scenarios. Each dashboard is designed to look like it comes from a different medical device company, with distinct visual styles and functionality.
 
