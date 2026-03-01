@@ -286,9 +286,18 @@ export default function CommandCenter() {
         body: JSON.stringify(body),
       }).then(r => r.json())
 
-    const addEvent = (msg: string) => {
+    const addBrowserEvent = (msg: string) => {
       const id = nextEventId.current++
       setBrowserEvents(prev => [...prev, { id, timestamp: Date.now(), data: { type: 'status', status: msg, output: null, cost: null } }])
+    }
+
+    const addAgentLog = (deviceName: string, action: string, reasoning: string | null, result: 'success' | 'in_progress' | 'failure') => {
+      const id = `sim-${nextEventId.current++}`
+      setBrowserEvents(prev => [...prev, {
+        id: nextEventId.current,
+        timestamp: Date.now(),
+        data: { type: 'status', status: `[${deviceName}] ${action}`, output: reasoning, cost: null }
+      }])
     }
 
     const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
@@ -305,57 +314,93 @@ export default function CommandCenter() {
         scenario: 'emergency_air_quality_response',
       })
       const { env, tug, uv, ehr } = result.tasks
-      addEvent('Scenario created — 4 phases initialized')
+      addBrowserEvent('Coordination scenario initialized — 4 agents queued')
+      await wait(1000)
+      addBrowserEvent('Analyzing room environment sensors...')
 
       // ── PHASE 1: ENV (5s quick pass) ──
       setOrchestratePhase(1)
       setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 1, agentId: 'env-agent', taskName: 'ENV Detect & Assess Anomaly' }])
-      addEvent('Phase 1/4: ENV Detect & Assess Anomaly')
+      addBrowserEvent('Phase 1/4: ENV agent navigating to Environmental Monitoring dashboard')
       await post('/agent-task-update', { taskId: env, status: 'running' })
-      await wait(5000)
+      await wait(2000)
+      addAgentLog('Environmental Monitoring', 'Reading sensor data', 'Checking CO2, particulate, temperature, humidity levels', 'in_progress')
+      await wait(1500)
+      addAgentLog('Environmental Monitoring', 'Anomaly detected: CO2 at 1200 ppm (limit: 1000)', 'Particulate matter at 85 µg/m³ (limit: 35)', 'in_progress')
+      await wait(1500)
+      addAgentLog('Environmental Monitoring', 'Acknowledged 3 alerts', 'Critical air quality compromise — initiating emergency protocol', 'success')
       await post('/agent-task-update', { taskId: env, status: 'completed', output: { alertsAcknowledged: 3, assessment: 'Critical CO2 and particulate levels' } })
-      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 1, agentId: 'env-agent', output: {}, cost: '$0.00' }])
-      addEvent('Phase 1 complete — anomaly assessed')
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 1, agentId: 'env-agent', output: {}, cost: '$0.02' }])
+      addBrowserEvent('Phase 1 complete — anomaly assessed, escalating to TUG')
 
-      // ── PHASE 2: TUG (2s buffer + 20s video + 2s buffer = 24s) ──
+      // ── PHASE 2: TUG (2s buffer + 20s video + 2s buffer) ──
       setOrchestratePhase(2)
       setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 2, agentId: 'tug-agent', taskName: 'TUG Emergency Supply Delivery' }])
-      addEvent('Phase 2/4: TUG Emergency Supply Delivery')
+      addBrowserEvent('Phase 2/4: TUG agent navigating to Fleet Monitor dashboard')
       await post('/agent-task-update', { taskId: tug, status: 'running' })
-      await wait(24000)
+      await wait(2000)
+      addAgentLog('TUG Fleet Monitor', 'Scanning fleet for available units', 'Looking for IDLE bots to dispatch', 'in_progress')
+      await wait(2000)
+      addAgentLog('TUG Fleet Monitor', 'Selected TUG-01 (Alpha) — deploying to Sterilization', 'Bot is IDLE with 94% battery, optimal for emergency dispatch', 'in_progress')
+      await wait(3000)
+      addAgentLog('TUG Fleet Monitor', 'TUG-01 status: EN_ROUTE', 'Carrying HEPA filters, air quality sensors, ventilation components', 'in_progress')
+      await wait(5000)
+      addAgentLog('TUG Fleet Monitor', 'TUG-01 progress: 50% — in transit to OR-3', null, 'in_progress')
+      await wait(5000)
+      addAgentLog('TUG Fleet Monitor', 'TUG-01 progress: 90% — approaching destination', null, 'in_progress')
+      await wait(5000)
+      addAgentLog('TUG Fleet Monitor', 'TUG-01 status: ARRIVED — supplies delivered', 'All emergency supplies confirmed at OR-3', 'success')
+      await wait(2000)
       await post('/agent-task-update', { taskId: tug, status: 'completed', output: { delivered: true, botId: 'TUG-01', supplies: ['HEPA filters', 'air quality sensors'] } })
-      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 2, agentId: 'tug-agent', output: {}, cost: '$0.00' }])
-      addEvent('Phase 2 complete — supplies delivered')
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 2, agentId: 'tug-agent', output: {}, cost: '$0.03' }])
+      addBrowserEvent('Phase 2 complete — emergency supplies delivered to OR-3')
 
-      // ── PHASE 3: UV (2s buffer + 20s video + 2s buffer = 24s) ──
+      // ── PHASE 3: UV (2s buffer + 20s video + 2s buffer) ──
       setOrchestratePhase(3)
       setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 3, agentId: 'uv-agent', taskName: 'UV Sterilization Cycle' }])
-      addEvent('Phase 3/4: UV Sterilization Cycle')
+      addBrowserEvent('Phase 3/4: UV agent navigating to UltraClean dashboard')
       await post('/agent-task-update', { taskId: uv, status: 'running' })
-      await wait(24000)
-      await post('/agent-task-update', { taskId: uv, status: 'completed', output: { sterilized: true, mode: 'Terminal', intensity: 100 } })
-      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 3, agentId: 'uv-agent', output: {}, cost: '$0.00' }])
-      addEvent('Phase 3 complete — sterilization done')
+      await wait(2000)
+      addAgentLog('UV Robot', 'Setting target room to OR-3', 'Configuring sterilization parameters', 'in_progress')
+      await wait(1500)
+      addAgentLog('UV Robot', 'Mode: Standard, Intensity: 85%', 'Starting UV-C disinfection cycle', 'in_progress')
+      await wait(2000)
+      addAgentLog('UV Robot', 'Cycle started — progress: 0%', 'UV-C lamps active, room must remain clear', 'in_progress')
+      await wait(5000)
+      addAgentLog('UV Robot', 'Sterilization progress: 40%', 'All surfaces receiving UV-C exposure', 'in_progress')
+      await wait(5000)
+      addAgentLog('UV Robot', 'Sterilization progress: 75%', 'Disinfection proceeding normally', 'in_progress')
+      await wait(5000)
+      addAgentLog('UV Robot', 'Sterilization progress: 100% — cycle complete', 'Full disinfection confirmed, room safe to enter', 'success')
+      await wait(2000)
+      await post('/agent-task-update', { taskId: uv, status: 'completed', output: { sterilized: true, mode: 'Standard', intensity: 85 } })
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 3, agentId: 'uv-agent', output: {}, cost: '$0.03' }])
+      addBrowserEvent('Phase 3 complete — OR-3 sterilization confirmed')
 
       // ── PHASE 4: EHR (3s quick wrap) ──
       setOrchestratePhase(4)
       setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 4, agentId: 'ehr-agent', taskName: 'EHR Confirm Room Ready' }])
-      addEvent('Phase 4/4: EHR Confirm Room Ready')
+      addBrowserEvent('Phase 4/4: EHR agent confirming room status')
       await post('/agent-task-update', { taskId: ehr, status: 'running' })
-      await wait(3000)
+      await wait(1500)
+      addAgentLog('Room Scheduling', 'Checking OR-3 schedule and status', 'Verifying no delays or conflicts', 'in_progress')
+      await wait(1500)
+      addAgentLog('Room Scheduling', 'OR-3 status set to READY — 0 min delay', 'Room cleared for next procedure', 'success')
       await post('/agent-task-update', { taskId: ehr, status: 'completed', output: { roomStatus: 'Ready', delayMinutes: 0, confirmed: true } })
-      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 4, agentId: 'ehr-agent', output: {}, cost: '$0.00' }])
-      addEvent('Phase 4 complete — room confirmed ready')
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 4, agentId: 'ehr-agent', output: {}, cost: '$0.01' }])
+      addBrowserEvent('Phase 4 complete — OR-3 confirmed ready for surgery')
 
       // Done
+      await wait(1000)
       setOrchestrateDone(true)
+      setOrchestrateCost('$0.09')
       setBrowserStatus('complete')
       const id = nextEventId.current++
-      setBrowserEvents(prev => [...prev, { id, timestamp: Date.now(), data: { type: 'done', status: 'complete', output: null, cost: '$0.00' } }])
+      setBrowserEvents(prev => [...prev, { id, timestamp: Date.now(), data: { type: 'done', status: 'complete', output: null, cost: '$0.09' } }])
     } catch (err: any) {
       setOrchestrateFailed(true)
       setBrowserStatus('error')
-      addEvent(`Error: ${err.message}`)
+      addBrowserEvent(`Error: ${err.message}`)
     } finally {
       setOrchestrating(false)
     }
