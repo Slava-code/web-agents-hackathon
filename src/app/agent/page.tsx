@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
+import { getRoomState, ROOM_IDS } from '@/lib/convex-api'
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -83,6 +84,15 @@ export default function AgentPage() {
   // Custom state
   const [customTask, setCustomTask] = useState('')
 
+  // Live monitoring state (polls Convex)
+  const [monitoringRoom, setMonitoringRoom] = useState('OR_3')
+  const [monitoringActive, setMonitoringActive] = useState(false)
+  const [deviceSnapshots, setDeviceSnapshots] = useState<Record<string, Record<string, unknown>>>({})
+  const [prevSnapshots, setPrevSnapshots] = useState<Record<string, Record<string, unknown>>>({})
+  const [changedFields, setChangedFields] = useState<Record<string, Set<string>>>({})
+  const [monitorLog, setMonitorLog] = useState<{ time: string; device: string; field: string; old: string; new_: string }[]>([])
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   // Load saved sites
   const loadSites = useCallback(async () => {
     try {
@@ -117,6 +127,76 @@ export default function AgentPage() {
     setWatchActive(false)
     setWatchTotalCost(0)
   }
+
+  // ─── Convex polling monitor ─────────────────────────────────────
+
+  const startMonitoring = () => {
+    setMonitoringActive(true)
+    setDeviceSnapshots({})
+    setPrevSnapshots({})
+    setChangedFields({})
+    setMonitorLog([])
+    setStatus('watching')
+  }
+
+  const stopMonitoring = () => {
+    setMonitoringActive(false)
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = null
+    setStatus('idle')
+  }
+
+  useEffect(() => {
+    if (!monitoringActive) return
+
+    const roomId = ROOM_IDS[monitoringRoom as keyof typeof ROOM_IDS]
+    if (!roomId) return
+
+    const poll = async () => {
+      try {
+        const data = await getRoomState(roomId)
+        if (!data || !data.devices) return
+
+        const newSnapshots: Record<string, Record<string, unknown>> = {}
+        const newChanged: Record<string, Set<string>> = {}
+
+        for (const device of data.devices) {
+          const fields = device.fields || {}
+          newSnapshots[device.name] = fields
+
+          // Diff against previous
+          const prev = prevSnapshots[device.name]
+          if (prev) {
+            const changed = new Set<string>()
+            for (const [key, val] of Object.entries(fields)) {
+              if (JSON.stringify(prev[key]) !== JSON.stringify(val)) {
+                changed.add(key)
+                setMonitorLog(log => [{
+                  time: new Date().toLocaleTimeString(),
+                  device: device.name,
+                  field: key,
+                  old: String(prev[key] ?? ''),
+                  new_: String(val ?? ''),
+                }, ...log].slice(0, 50))
+              }
+            }
+            if (changed.size > 0) newChanged[device.name] = changed
+          }
+        }
+
+        setPrevSnapshots(deviceSnapshots)
+        setDeviceSnapshots(newSnapshots)
+        setChangedFields(newChanged)
+      } catch { /* ignore poll errors */ }
+    }
+
+    poll() // immediate first poll
+    pollRef.current = setInterval(poll, 2000)
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monitoringActive, monitoringRoom])
 
   // ─── SSE stream consumer ──────────────────────────────────────────
 
@@ -778,55 +858,126 @@ export default function AgentPage() {
             {/* ── Watch Tab ──────────────────────────────────── */}
             {tab === 'watch' && (
               <div className="p-4 space-y-4">
-                {/* Active Monitoring Status */}
-                <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-sm font-semibold text-emerald-400">Live Monitoring Active</span>
+                {/* Room Selector + Start/Stop */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+                      Operating Room
+                    </label>
+                    <select
+                      value={monitoringRoom}
+                      onChange={(e) => setMonitoringRoom(e.target.value)}
+                      disabled={monitoringActive}
+                      className="mt-1 w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-lg text-sm text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="OR_1">OR-1</option>
+                      <option value="OR_2">OR-2</option>
+                      <option value="OR_3">OR-3 (Primary)</option>
+                      <option value="OR_4">OR-4</option>
+                    </select>
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Extraction scripts are running on each device dashboard.
-                    Any state change is detected and pushed to Convex within 300ms.
-                  </p>
+                  <button
+                    onClick={monitoringActive ? stopMonitoring : startMonitoring}
+                    className={`w-full px-4 py-3 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                      monitoringActive
+                        ? 'bg-red-600 hover:bg-red-500'
+                        : 'bg-emerald-600 hover:bg-emerald-500'
+                    }`}
+                  >
+                    {monitoringActive ? (
+                      <>
+                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                        Stop Monitoring
+                      </>
+                    ) : (
+                      'Start Monitoring'
+                    )}
+                  </button>
                 </div>
 
-                {/* Device Links */}
-                <div>
-                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Monitored Devices</h3>
-                  <div className="space-y-2">
-                    {[
-                      { name: 'UV-C Disinfection Robot', path: '/uv-robot', color: 'text-violet-400' },
-                      { name: 'Environmental Monitoring', path: '/environmental', color: 'text-cyan-400' },
-                      { name: 'TUG Fleet Monitor', path: '/tug-robot', color: 'text-emerald-400' },
-                      { name: 'Room Scheduling (EHR)', path: '/ehr', color: 'text-blue-400' },
-                    ].map((device) => (
-                      <a
-                        key={device.path}
-                        href={device.path}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg p-3 hover:border-slate-500 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                          <span className={`text-sm font-medium ${device.color}`}>{device.name}</span>
+                {/* Live Device Data */}
+                {monitoringActive && Object.keys(deviceSnapshots).length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-xs text-emerald-400 font-medium uppercase tracking-wider">
+                        Polling Convex every 2s
+                      </span>
+                    </div>
+
+                    {Object.entries(deviceSnapshots).map(([deviceName, fields]) => {
+                      const changed = changedFields[deviceName] || new Set()
+                      return (
+                        <div key={deviceName} className="bg-slate-800 border border-slate-700 rounded-lg overflow-hidden">
+                          <div className="px-3 py-2 bg-slate-700/50 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-slate-300">{deviceName}</span>
+                            {changed.size > 0 && (
+                              <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
+                                {changed.size} changed
+                              </span>
+                            )}
+                          </div>
+                          <div className="px-3 py-2 space-y-0.5 max-h-[200px] overflow-auto">
+                            {Object.entries(fields).map(([key, val]) => (
+                              <div
+                                key={key}
+                                className={`text-xs font-mono flex justify-between py-0.5 transition-colors ${
+                                  changed.has(key) ? 'text-yellow-400 bg-yellow-500/10 px-1 rounded' : 'text-slate-400'
+                                }`}
+                              >
+                                <span className="text-slate-500">{key}</span>
+                                <span>{String(val)}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                        <span className="text-xs text-slate-500 font-mono">{device.path}</span>
-                      </a>
-                    ))}
+                      )
+                    })}
                   </div>
-                </div>
+                )}
 
-                {/* How It Works */}
-                <div className="border-t border-slate-700 pt-4">
-                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Pipeline</h3>
-                  <div className="space-y-2 text-xs text-slate-500">
-                    <p>1. Browser-use agents learned each dashboard and generated extraction scripts</p>
-                    <p>2. Scripts monitor the DOM for state changes on each device page</p>
-                    <p>3. Changes are pushed to Convex within 300ms via field-update API</p>
-                    <p>4. Unity reads from Convex and updates the 3D operating room in real-time</p>
+                {/* Monitoring waiting state */}
+                {monitoringActive && Object.keys(deviceSnapshots).length === 0 && (
+                  <div className="text-center py-8">
+                    <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-xs text-slate-500">Connecting to Convex...</p>
                   </div>
-                </div>
+                )}
+
+                {/* Change Log */}
+                {monitorLog.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Change Log</h3>
+                    <div className="max-h-[250px] overflow-auto space-y-1">
+                      {monitorLog.map((entry, i) => (
+                        <div key={i} className="text-xs font-mono bg-slate-800 border border-slate-700 rounded px-2 py-1.5">
+                          <span className="text-slate-500">{entry.time}</span>
+                          {' '}
+                          <span className="text-cyan-400">{entry.device}</span>
+                          {' '}
+                          <span className="text-slate-500">{entry.field}:</span>
+                          {' '}
+                          <span className="text-red-400 line-through">{entry.old}</span>
+                          {' → '}
+                          <span className="text-green-400">{entry.new_}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pipeline info (collapsed when monitoring) */}
+                {!monitoringActive && (
+                  <div className="border-t border-slate-700 pt-4">
+                    <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Pipeline</h3>
+                    <div className="space-y-2 text-xs text-slate-500">
+                      <p>1. Browser-use agents learned each dashboard and generated extraction scripts</p>
+                      <p>2. Scripts monitor the DOM for state changes on each device page</p>
+                      <p>3. Changes are pushed to Convex within 300ms via field-update API</p>
+                      <p>4. Unity reads from Convex and updates the 3D operating room in real-time</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -62,6 +62,7 @@ export default function EnvironmentalMonitoring() {
     tempMax: 72
   })
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [anomalyActive, setAnomalyActive] = useState(false)
 
   // Convex real-time overlay
   const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "Environmental Monitoring")
@@ -141,6 +142,40 @@ export default function EnvironmentalMonitoring() {
   }), [totalSensors, onlineSensors, warningSensors, offlineSensors, highRiskSensors, activeAlerts, env001, env003, thresholds])
   useConvexSync(DEVICE_IDS.ENV_MONITORING, envSyncFields)
 
+  // Anomaly cycle: spike ENV-003 after 15s, recover after 40s
+  useEffect(() => {
+    const spikeTimer = setTimeout(() => {
+      setAnomalyActive(true)
+      setSensors(prev => prev.map(sensor => {
+        if (sensor.id !== 'ENV-003') return sensor
+        return { ...sensor, particulate: 145, co2: 920, temperature: 74.8, riskLevel: 'high' as const, status: 'warning' as const }
+      }))
+      setAlerts(prev => [
+        { id: Date.now(), type: 'critical' as const, message: 'CRITICAL: OR-3 air quality severely degraded — PM2.5 and CO2 above safe limits', sensor: 'ENV-003', time: 'just now', acknowledged: false },
+        ...prev,
+      ])
+      // Also mark OR-3 as blocked in scheduling
+      updateDeviceFields({ deviceId: DEVICE_IDS.SCHEDULING, fields: { roomStatus_OR3: 'Blocked', envAlert_OR3: 'critical' } })
+    }, 15000)
+
+    const recoverTimer = setTimeout(() => {
+      setAnomalyActive(false)
+      setSensors(prev => prev.map(sensor => {
+        if (sensor.id !== 'ENV-003') return sensor
+        return { ...sensor, particulate: 48, co2: 590, temperature: 70.1, riskLevel: 'low' as const, status: 'online' as const }
+      }))
+      setAlerts(prev => [
+        { id: Date.now(), type: 'info' as const, message: 'OR-3 air quality returned to normal', sensor: 'ENV-003', time: 'just now', acknowledged: false },
+        ...prev,
+      ])
+      // Restore OR-3 scheduling status
+      updateDeviceFields({ deviceId: DEVICE_IDS.SCHEDULING, fields: { roomStatus_OR3: 'Ready', envAlert_OR3: 'clear' } })
+    }, 55000) // 15s + 40s
+
+    return () => { clearTimeout(spikeTimer); clearTimeout(recoverTimer) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Sensor categories
   const sensorsByType = sensors.reduce((acc, s) => {
     acc[s.type] = (acc[s.type] || 0) + 1
@@ -167,8 +202,8 @@ export default function EnvironmentalMonitoring() {
     const interval = setInterval(() => {
       setSensors(prev => prev.map(sensor => {
         if (sensor.status === 'offline') return sensor
-        // Guard: don't jitter ENV-003 when Convex has an active anomaly state
-        if (sensor.id === 'ENV-003' && convexState.status !== 'idle') return sensor
+        // Guard: don't jitter ENV-003 during anomaly or when Convex is controlling it
+        if (sensor.id === 'ENV-003' && (anomalyActive || convexState.status !== 'idle')) return sensor
         return {
           ...sensor,
           particulate: Math.max(0, Math.min(150, sensor.particulate + Math.floor((Math.random() - 0.5) * 10))),
@@ -179,7 +214,7 @@ export default function EnvironmentalMonitoring() {
       }))
     }, 5000)
     return () => clearInterval(interval)
-  }, [autoRefresh, convexState.status])
+  }, [autoRefresh, convexState.status, anomalyActive])
 
   const acknowledgeAlert = (id: number) => {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a))
