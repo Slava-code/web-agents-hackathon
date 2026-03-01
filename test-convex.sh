@@ -947,6 +947,138 @@ else
 fi
 
 ###############################################################################
+# SECTION 14 — Discovery endpoints
+###############################################################################
+
+_log_header "SECTION 14: Discovery endpoints"
+
+# 14.1: POST /discovery-reset works (start clean)
+_log_test "POST /discovery-reset returns ok"
+RESP=$(http_post "/discovery-reset" "{}")
+OK=$(echo "$RESP" | jq -r '.ok')
+if [ "$OK" = "true" ]; then
+  _pass "discovery-reset returned ok"
+else
+  _fail "discovery-reset failed" "$RESP"
+fi
+
+# 14.2: Verify existing rooms/devices unaffected after discovery-reset
+_log_test "Existing rooms unaffected after discovery-reset"
+ROOMS=$(convex_run "rooms:list" "{}")
+RCOUNT=$(echo "$ROOMS" | jq 'length')
+if [ "$RCOUNT" -ge 4 ]; then
+  _pass "Rooms still present ($RCOUNT rooms)"
+else
+  _fail "Rooms missing after discovery-reset" "count=$RCOUNT"
+fi
+
+# 14.3: POST /discovery-start creates session and pages
+_log_test "POST /discovery-start creates session"
+RESP=$(http_post "/discovery-start" "{\"mode\":\"mock\",\"baseUrl\":\"http://localhost:3000\",\"pages\":[{\"pageUrl\":\"/uv-robot\",\"pageName\":\"UV Robot\"},{\"pageUrl\":\"/tug-robot\",\"pageName\":\"TUG Fleet\"}]}")
+SESSION_ID=$(echo "$RESP" | jq -r '.sessionId')
+if [ -n "$SESSION_ID" ] && [ "$SESSION_ID" != "null" ]; then
+  _pass "Session created: $SESSION_ID"
+else
+  _fail "No sessionId returned" "$RESP"
+fi
+settle
+
+# 14.4: Verify session pages created
+_log_test "Session pages created via Convex query"
+PAGES=$(convex_run "discovery:getSessionPages" "{\"sessionId\":\"$SESSION_ID\"}")
+PCOUNT=$(echo "$PAGES" | jq 'length')
+if [ "$PCOUNT" -eq 2 ]; then
+  _pass "2 pages created for session"
+else
+  _fail "Expected 2 pages" "got $PCOUNT"
+fi
+
+# 14.5: POST /discovery-update progresses page status
+_log_test "POST /discovery-update changes page status to visiting"
+RESP=$(http_post "/discovery-update" "{\"sessionId\":\"$SESSION_ID\",\"pageUrl\":\"/uv-robot\",\"status\":\"visiting\"}")
+OK=$(echo "$RESP" | jq -r '.ok')
+if [ "$OK" = "true" ]; then
+  _pass "Page status updated to visiting"
+else
+  _fail "discovery-update failed" "$RESP"
+fi
+settle
+
+# 14.6: Verify page status changed
+_log_test "Page status is now 'visiting'"
+PAGES=$(convex_run "discovery:getSessionPages" "{\"sessionId\":\"$SESSION_ID\"}")
+UV_STATUS=$(echo "$PAGES" | jq -r '.[] | select(.pageUrl == "/uv-robot") | .status')
+if [ "$UV_STATUS" = "visiting" ]; then
+  _pass "UV Robot page status is 'visiting'"
+else
+  _fail "Wrong status" "expected 'visiting', got '$UV_STATUS'"
+fi
+
+# 14.7: POST /discovery-log creates log entry
+_log_test "POST /discovery-log creates log entry"
+RESP=$(http_post "/discovery-log" "{\"sessionId\":\"$SESSION_ID\",\"pageUrl\":\"/uv-robot\",\"level\":\"agent_thought\",\"message\":\"I see a UV sterilization control panel\"}")
+OK=$(echo "$RESP" | jq -r '.ok')
+if [ "$OK" = "true" ]; then
+  _pass "Log entry created"
+else
+  _fail "discovery-log failed" "$RESP"
+fi
+settle
+
+# 14.8: Verify log entries via query
+_log_test "Session logs retrievable via query"
+LOGS=$(convex_run "discovery:getSessionLogs" "{\"sessionId\":\"$SESSION_ID\"}")
+LCOUNT=$(echo "$LOGS" | jq 'length')
+if [ "$LCOUNT" -ge 2 ]; then
+  _pass "At least 2 log entries (session start + agent thought)"
+else
+  _fail "Expected >= 2 logs" "got $LCOUNT"
+fi
+
+# 14.9: Full page lifecycle: update to complete with data
+_log_test "Full page lifecycle: update to complete with extractedData"
+RESP=$(http_post "/discovery-update" "{\"sessionId\":\"$SESSION_ID\",\"pageUrl\":\"/uv-robot\",\"status\":\"complete\",\"discoveredFields\":[{\"name\":\"battery\",\"type\":\"number\"}],\"inferredSchema\":{\"battery\":{\"type\":\"number\",\"label\":\"Battery\"}},\"extractionScript\":\"console.log('test')\",\"extractedData\":{\"battery\":87}}")
+OK=$(echo "$RESP" | jq -r '.ok')
+if [ "$OK" = "true" ]; then
+  _pass "Page updated to complete with all data"
+else
+  _fail "discovery-update complete failed" "$RESP"
+fi
+settle
+
+# 14.10: Verify latest session query works
+_log_test "getLatestSession returns our session"
+LATEST=$(convex_run "discovery:getLatestSession" "{}")
+LATEST_ID=$(echo "$LATEST" | jq -r '._id')
+if [ "$LATEST_ID" = "$SESSION_ID" ]; then
+  _pass "Latest session matches our session"
+else
+  _fail "Latest session mismatch" "expected $SESSION_ID, got $LATEST_ID"
+fi
+
+# 14.11: OPTIONS /discovery-start returns CORS 204
+_log_test "OPTIONS /discovery-start returns CORS 204"
+CORS_RESP=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "${SITE_URL}/discovery-start" \
+  -H "Origin: http://localhost:3000" \
+  -H "Access-Control-Request-Method: POST")
+if [ "$CORS_RESP" = "204" ]; then
+  _pass "OPTIONS /discovery-start returned 204"
+else
+  _fail "OPTIONS status code wrong" "expected 204, got $CORS_RESP"
+fi
+
+# 14.12: Cleanup — reset discovery tables again
+_log_test "Final discovery-reset cleans up"
+RESP=$(http_post "/discovery-reset" "{}")
+OK=$(echo "$RESP" | jq -r '.ok')
+DELETED=$(echo "$RESP" | jq -r '.deleted')
+if [ "$OK" = "true" ] && [ "$DELETED" -ge 1 ]; then
+  _pass "Cleanup successful, deleted $DELETED records"
+else
+  _fail "Cleanup failed" "$RESP"
+fi
+
+###############################################################################
 # Summary
 ###############################################################################
 
