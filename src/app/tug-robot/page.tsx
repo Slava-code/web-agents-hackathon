@@ -22,9 +22,9 @@ const SOURCES = ['OR-1', 'OR-2', 'OR-3', 'OR-4', 'OR-5', 'OR-6']
 
 export default function TUGDashboard() {
   const [bots, setBots] = useState<TugBot[]>([
-    { id: 'TUG-01', name: 'Alpha', status: 'IDLE', progress: 0, source: 'OR-1', destination: 'Sterilization', battery: 94 },
-    { id: 'TUG-02', name: 'Beta', status: 'EN_ROUTE', progress: 45, source: 'OR-3', destination: 'Sterilization', battery: 78 },
-    { id: 'TUG-03', name: 'Gamma', status: 'IDLE', progress: 0, source: 'OR-2', destination: 'Sterilization', battery: 62 },
+    { id: 'TUG-01', name: 'Alpha', status: 'EN_ROUTE', progress: 45, source: 'OR-1', destination: 'Sterilization', battery: 94 },
+    { id: 'TUG-02', name: 'Beta', status: 'IDLE', progress: 0, source: 'OR-3', destination: 'Sterilization', battery: 78 },
+    { id: 'TUG-03', name: 'Gamma', status: 'RETURNING', progress: 65, source: 'OR-2', destination: 'Sterilization', battery: 62 },
     { id: 'TUG-04', name: 'Delta', status: 'RETURNING', progress: 80, source: 'OR-4', destination: 'Sterilization', battery: 55 },
   ])
 
