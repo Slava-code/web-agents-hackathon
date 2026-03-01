@@ -34,13 +34,22 @@ public class ConvexManager : MonoBehaviour
 
     private Dictionary<string, string> previousStatuses = new Dictionary<string, string>();
 
-    // Status mapping from Convex values to Unity values
+    // Status mapping: Convex device status → Unity status (for ORDevice.cs switch/case)
     private static readonly Dictionary<string, string> StatusMap = new Dictionary<string, string>
     {
         { "idle", "idle" },
-        { "configuring", "active" },
+        { "configuring", "running" },
         { "ready", "complete" },
         { "error", "error" },
+    };
+
+    // Category mapping: Convex device category → Unity friendly deviceId
+    private static readonly Dictionary<string, string> CategoryToDeviceId = new Dictionary<string, string>
+    {
+        { "sterilization", "uv_robot" },
+        { "transport", "ptz_camera" },
+        { "monitoring", "env_sensors" },
+        { "scheduling", "room_scheduling" },
     };
 
     void Start()
@@ -87,9 +96,10 @@ public class ConvexManager : MonoBehaviour
             var mapped = new List<DeviceState>();
             foreach (var raw in response.devices)
             {
+                string friendlyId = MapCategoryToDeviceId(raw.category, raw._id);
                 var device = new DeviceState
                 {
-                    deviceId = raw._id,
+                    deviceId = friendlyId,
                     name = raw.name,
                     vendor = raw.category,
                     dashboardUrl = raw.url,
@@ -124,6 +134,13 @@ public class ConvexManager : MonoBehaviour
         if (convexStatus != null && StatusMap.TryGetValue(convexStatus, out string mapped))
             return mapped;
         return convexStatus ?? "idle";
+    }
+
+    static string MapCategoryToDeviceId(string category, string fallbackId)
+    {
+        if (category != null && CategoryToDeviceId.TryGetValue(category, out string friendlyId))
+            return friendlyId;
+        return fallbackId;
     }
 
     // ---- Data Classes ----
