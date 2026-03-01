@@ -815,7 +815,7 @@ export default function AgentPage() {
             {/* ── Watch Tab ──────────────────────────────────── */}
             {tab === 'watch' && (
               <div>
-                {/* Demo Mode Button */}
+                {/* Watch All Devices */}
                 <div className="p-4 pb-2">
                   <button
                     onClick={handleDemo}
@@ -825,10 +825,10 @@ export default function AgentPage() {
                     {isRunning ? (
                       <>
                         <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        Demo Running...
+                        Watching All Devices...
                       </>
                     ) : (
-                      'Launch Demo (All 4 Devices)'
+                      'Watch All Devices'
                     )}
                   </button>
                   {isRunning && (
@@ -836,17 +836,17 @@ export default function AgentPage() {
                       onClick={handleStop}
                       className="w-full mt-2 px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-medium transition-colors"
                     >
-                      Stop Demo
+                      Stop
                     </button>
                   )}
                   <p className="text-xs text-slate-500 mt-2 text-center">
-                    Simulates all devices with changing data — no browser-use needed
+                    Monitors all 4 devices and pushes changes to Convex
                   </p>
                 </div>
 
                 <div className="px-4 py-2">
                   <div className="border-t border-slate-700 pt-2">
-                    <p className="text-xs text-slate-500 text-center mb-1">Or watch a specific route with browser-use:</p>
+                    <p className="text-xs text-slate-500 text-center mb-1">Or watch a specific route:</p>
                   </div>
                 </div>
 

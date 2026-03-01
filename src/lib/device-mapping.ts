@@ -8,5 +8,9 @@ export const ROUTE_TO_DEVICE: Record<string, { deviceId: string; name: string }>
   "/ehr":           { deviceId: "jd7drsdfe5h2d9hq06ap95gx9d82244t", name: "Scheduling" },
 };
 
+// HTTP endpoints live on .convex.site, NOT .convex.cloud
+// CONVEX_URL is often the .cloud URL which won't work for HTTP routes
 export const CONVEX_URL =
-  process.env.CONVEX_SITE_URL || process.env.CONVEX_URL || "https://adept-wren-805.convex.site";
+  process.env.CONVEX_SITE_URL ||
+  (process.env.CONVEX_URL ? process.env.CONVEX_URL.replace(".convex.cloud", ".convex.site") : null) ||
+  "https://adept-wren-805.convex.site";

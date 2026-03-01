@@ -257,7 +257,7 @@ export async function POST(req: NextRequest) {
       };
 
       // Push initial state for all devices
-      send({ type: "watch_started", url: "DEMO MODE — all 4 devices", intervalMs, demo: true });
+      send({ type: "watch_started", url: "All 4 devices", intervalMs });
 
       for (const [route, mapping] of Object.entries(ROUTE_TO_DEVICE)) {
         const baseData = route === "/uv-robot" ? UV_ROBOT_BASE
@@ -314,7 +314,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      send({ type: "watch_ended", reason: "demo_complete", iterations: MAX_TICKS });
+      send({ type: "watch_ended", reason: "complete", iterations: MAX_TICKS });
       controller.close();
     },
   });
@@ -334,20 +334,22 @@ async function pushToConvex(
   send: (data: Record<string, unknown>) => void
 ) {
   try {
-    const res = await fetch(`${CONVEX_URL}/field-update`, {
+    const url = `${CONVEX_URL}/field-update`;
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ deviceId, fields }),
     });
-    const result = await res.json();
-    send({
-      type: "convex_push",
-      ok: result.ok === true,
-      deviceId,
-      fieldsSent: Object.keys(fields).length,
-    });
+    const text = await res.text();
+    let result: { ok?: boolean } = {};
+    try { result = JSON.parse(text); } catch { /* non-JSON response */ }
+    if (result.ok) {
+      send({ type: "convex_push", ok: true, deviceId, fieldsSent: Object.keys(fields).length });
+    } else {
+      send({ type: "convex_push", ok: false, deviceId, error: `${res.status} ${text.slice(0, 200)}`, fieldsSent: 0 });
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    send({ type: "convex_push", ok: false, deviceId, error: msg });
+    send({ type: "convex_push", ok: false, deviceId, error: msg, fieldsSent: 0 });
   }
 }
