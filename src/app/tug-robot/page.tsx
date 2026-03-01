@@ -147,7 +147,7 @@ export default function TUGDashboard() {
             <div className="flex items-center gap-6 text-sm">
               <div className="text-right">
                 <p className="text-slate-400 text-xs">Current Time</p>
-                <p className="font-mono text-slate-700">{currentTime.toLocaleTimeString()}</p>
+                <p className="font-mono text-slate-700" suppressHydrationWarning>{currentTime.toLocaleTimeString()}</p>
               </div>
               <div className="w-px h-8 bg-slate-200" />
               <div className="text-right">

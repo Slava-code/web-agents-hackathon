@@ -263,7 +263,7 @@ export default function UVRobotPortal() {
               </div>
               <div className="text-right">
                 <p className="text-[10px] uppercase tracking-[0.15em] text-[var(--mid-gray)]">Time</p>
-                <p className="font-mono text-sm">{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
+                <p className="font-mono text-sm" suppressHydrationWarning>{currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${
