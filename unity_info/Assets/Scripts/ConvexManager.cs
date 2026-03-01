@@ -18,7 +18,7 @@ public class ConvexManager : MonoBehaviour
     public string convexUrl = "https://impartial-whale-32.convex.site";
 
     [Tooltip("Room ID to poll state for")]
-    public string roomId = "";
+    public string roomId = "jn7bw19xt7a818kvh3w5dhxvvd823j8a";
 
     [Tooltip("How often to poll for updates (seconds)")]
     public float pollInterval = 0.5f;
