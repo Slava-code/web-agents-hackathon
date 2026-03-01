@@ -161,6 +161,278 @@ Post an agent action log entry (with optional chain-of-thought reasoning).
 
 ---
 
+---
+
+# Agent Coordination Endpoints
+
+## POST `/agent-claim`
+
+Acquire a resource lock (device or room). Idempotent if same agent re-claims. Blocked if held by another agent. Lazy TTL expiry on stale locks.
+
+**Request:**
+```json
+{
+  "agentId": "env-agent",
+  "resourceType": "room" | "device",
+  "resourceId": "<Id<devices>> or <Id<rooms>>",
+  "action": "Assessing anomaly readings",
+  "ttlMs": 300000  // optional, default 5 min
+}
+```
+
+**Response (200) — granted:**
+```json
+{ "ok": true, "lockId": "<Id<resourceLocks>>" }
+```
+
+**Response (200) — idempotent re-claim:**
+```json
+{ "ok": true, "lockId": "<Id<resourceLocks>>", "idempotent": true }
+```
+
+**Response (200) — blocked:**
+```json
+{ "ok": false, "error": "resource_locked", "heldBy": "other-agent", "lockId": "..." }
+```
+
+**Errors:** `400` — missing required fields or invalid resourceType
+
+---
+
+## POST `/agent-release`
+
+Release a resource lock. Only the owning agent can release.
+
+**Request:**
+```json
+{
+  "agentId": "env-agent",
+  "resourceId": "<Id<devices>> or <Id<rooms>>"
+}
+```
+
+**Response (200):**
+```json
+{ "ok": true }
+```
+
+**Response (200) — not owner:**
+```json
+{ "ok": false, "error": "not_owner", "heldBy": "other-agent" }
+```
+
+**Errors:** `400` — missing required fields
+
+---
+
+## POST `/agent-message`
+
+Post a message to the agent communication bus. Defaults to broadcast if `toAgent` omitted.
+
+**Request:**
+```json
+{
+  "fromAgent": "env-agent",
+  "toAgent": "tug-agent",          // optional, defaults to "broadcast"
+  "type": "intent" | "claim" | "release" | "request" | "response" | "alert" | "heartbeat",
+  "payload": { ... },              // any JSON
+  "roomId": "<Id<rooms>>"
+}
+```
+
+**Response (200):**
+```json
+{ "ok": true, "messageId": "<Id<agentMessages>>" }
+```
+
+**Errors:** `400` — missing required fields or invalid type
+
+---
+
+## GET `/agent-messages?agentId=X&roomId=Y&since=Z&limit=N`
+
+Poll messages for a specific agent (returns broadcast + directed messages).
+
+**Query params:**
+- `agentId` (required) — agent to filter for
+- `roomId` (required) — room scope
+- `since` (optional) — timestamp in ms, only return messages after this time
+- `limit` (optional) — max messages to return (default 50)
+
+**Response (200):**
+```json
+{ "messages": [ { "fromAgent": "...", "toAgent": "...", "type": "...", "payload": {}, "timestamp": 123 }, ... ] }
+```
+
+---
+
+## POST `/agent-task-update`
+
+Update a task's status in the task graph. Validates state transitions (ready→running→completed/failed). On completion, auto-promotes downstream tasks whose dependencies are all met. When all tasks complete, auto-resolves the anomaly.
+
+**Request:**
+```json
+{
+  "taskId": "<Id<taskGraph>>",
+  "status": "running" | "completed" | "failed",
+  "output": { ... }  // optional, recorded on completion
+}
+```
+
+**Response (200):**
+```json
+{ "ok": true, "unblockedTasks": ["<taskId>", ...], "allDone": false }
+```
+
+**State transitions:**
+- `ready` → `running`
+- `running` → `completed` | `failed`
+- Other transitions → error
+
+**Side effects on completion:**
+- Promotes dependent pending tasks to "ready" if all their deps are met
+- If ALL tasks in command are completed → auto-calls `resolveAnomaly` to restore safe readings and room to "ready"
+
+**Errors:** `400` — missing fields or invalid status; `500` — invalid state transition
+
+---
+
+## GET `/agent-next-task?agentId=X&commandId=Y`
+
+Poll for the next runnable task for an agent. Used by agent orchestrators to discover when their task is ready.
+
+**Query params:**
+- `agentId` (required) — agent identifier
+- `commandId` (required) — coordination command ID
+
+**Response (200) — task ready:**
+```json
+{ "task": { "_id": "...", "taskName": "...", "status": "ready", "input": { "instructions": "...", "deviceId": "...", ... } }, "waiting": false }
+```
+
+**Response (200) — waiting (blocked):**
+```json
+{ "task": null, "waiting": true, "blockedBy": [{ "taskId": "...", "taskName": "...", "agentId": "env-agent", "status": "running" }] }
+```
+
+**Response (200) — all done:**
+```json
+{ "task": null, "waiting": false, "allDone": true }
+```
+
+---
+
+## POST `/coordination-start`
+
+Initialize a coordination scenario, creating the full task dependency graph.
+
+**Request:**
+```json
+{
+  "commandId": "unique-command-id",
+  "roomId": "<Id<rooms>>",
+  "scenario": "emergency_air_quality_response"  // optional, defaults to this
+}
+```
+
+**Response (200):**
+```json
+{
+  "ok": true,
+  "commandId": "...",
+  "tasks": { "env": "<taskId>", "tug": "<taskId>", "uv": "<taskId>", "ehr": "<taskId>" },
+  "taskCount": 4
+}
+```
+
+**Scenario: `emergency_air_quality_response`** creates 4 tasks:
+1. **ENV Detect & Assess** (phase 1, no deps → ready)
+2. **TUG Emergency Supply Delivery** (phase 2, depends on ENV → pending)
+3. **UV Sterilization Cycle** (phase 3, depends on TUG → pending)
+4. **EHR Confirm Room Ready** (phase 4, depends on UV → pending)
+
+Each task's `input` includes `deviceId`, `deviceUrl`, `instructions` (natural language for BrowserUse), and `expectedOutput` hints.
+
+**Errors:** `400` — missing fields or invalid scenario; `500` — required devices not found in room
+
+---
+
+## POST `/coordination-reset`
+
+Clear all coordination data (agentMessages, resourceLocks, taskGraph tables).
+
+**Request:** `{}` (empty body)
+
+**Response (200):**
+```json
+{ "ok": true, "deleted": 15 }
+```
+
+---
+
+## GET `/coordination-state?roomId=X`
+
+Full coordination state for Unity 3D visualization polling. Returns current scenario progress, active agent/phase, locks, messages, and completion status.
+
+**Query params:**
+- `roomId` (required) — room to get coordination state for
+
+**Response (200):**
+```json
+{
+  "activeScenario": "emergency_air_quality_response" | null,
+  "commandId": "...",
+  "currentPhase": 2,
+  "activeAgent": "tug-agent",
+  "activeTask": { "taskName": "TUG Emergency Supply Delivery", "status": "running", "phase": 2 },
+  "locks": [{ "agentId": "tug-agent", "resourceType": "device", "action": "Delivering HEPA filters" }],
+  "tasks": [
+    { "taskId": "...", "taskName": "ENV Detect & Assess Anomaly", "phase": 1, "status": "completed", "agentId": "env-agent" },
+    { "taskId": "...", "taskName": "TUG Emergency Supply Delivery", "phase": 2, "status": "running", "agentId": "tug-agent" },
+    { "taskId": "...", "taskName": "UV Sterilization Cycle", "phase": 3, "status": "pending", "agentId": "uv-agent" },
+    { "taskId": "...", "taskName": "EHR Confirm Room Ready", "phase": 4, "status": "pending", "agentId": "ehr-agent" }
+  ],
+  "recentMessages": [ ... ],
+  "progress": { "total": 4, "completed": 1, "running": 1, "pending": 2, "failed": 0 },
+  "allDone": false
+}
+```
+
+**Unity animation mapping:**
+- Phase 1 (env-agent running): sensor scan animation
+- Phase 2 (tug-agent running): TUG bot drives into OR-3
+- Phase 3 (uv-agent running): UV lamp powers on + cycling
+- Phase 4 (ehr-agent running): screen update animation
+- `allDone=true`: green "READY" state
+
+---
+
+## POST `/resolve-anomaly`
+
+Manually restore safe environmental readings and reset room to ready. Called automatically when all coordination tasks complete, but also available for manual reset.
+
+**Request:**
+```json
+{
+  "roomId": "<Id<rooms>>"
+}
+```
+
+**Response (200):**
+```json
+{ "ok": true, "resolvedAt": 1772345678901 }
+```
+
+**Side effects:**
+- Environmental Monitoring: CO2→450, particulate→25, temp→70.2, humidity→45, pressure→0.05, allWithinRange→true, riskLevel→normal
+- All devices in room → status "idle"
+- Room → status "ready"
+- Inserts clean environmentReadings record
+
+**Errors:** `400` — missing roomId
+
+---
+
 ## Seed Data IDs
 
 ### Rooms
@@ -230,3 +502,6 @@ const state = useQuery(api.roomQueries.getRoomStatePublic, {
 | `api.commands.submit` | mutation | `{ text, roomId }` |
 | `api.actionLogs.byCommand` | query | `{ commandId }` |
 | `api.actionLogs.log` | mutation | `{ deviceId, commandId, action, result, reasoning? }` |
+| `api.coordination.getActiveLocks` | query | `{ roomId }` |
+| `api.coordination.getAgentMessages` | query | `{ roomId, limit? }` |
+| `api.taskGraph.getTaskGraph` | query | `{ commandId }` |

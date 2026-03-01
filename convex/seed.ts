@@ -1,5 +1,22 @@
 import { internalMutation } from "./_generated/server";
 
+export const resetCoordination = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const tables = ["agentMessages", "resourceLocks", "taskGraph"] as const;
+    let deleted = 0;
+    for (const table of tables) {
+      const rows = await ctx.db.query(table).collect();
+      for (const row of rows) {
+        await ctx.db.delete(row._id);
+        deleted++;
+      }
+    }
+    console.log(`Coordination data cleared: ${deleted} records deleted.`);
+    return { ok: true, deleted };
+  },
+});
+
 export const reset = internalMutation({
   args: {},
   handler: async (ctx) => {

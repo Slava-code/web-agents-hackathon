@@ -136,4 +136,71 @@ export default defineSchema({
     outOfRangeFields: v.optional(v.array(v.string())),
     timestamp: v.number(),
   }).index("by_room", ["roomId"]),
+
+  // --- Agent Coordination tables ---
+
+  agentMessages: defineTable({
+    fromAgent: v.string(),
+    toAgent: v.string(), // "broadcast" for all
+    type: v.union(
+      v.literal("intent"),
+      v.literal("claim"),
+      v.literal("release"),
+      v.literal("request"),
+      v.literal("response"),
+      v.literal("alert"),
+      v.literal("heartbeat"),
+    ),
+    payload: v.any(),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("read"),
+    ),
+    roomId: v.id("rooms"),
+    timestamp: v.number(),
+  })
+    .index("by_room", ["roomId"])
+    .index("by_toAgent", ["toAgent"])
+    .index("by_room_timestamp", ["roomId", "timestamp"]),
+
+  resourceLocks: defineTable({
+    agentId: v.string(),
+    resourceType: v.union(v.literal("room"), v.literal("device")),
+    resourceId: v.string(),
+    action: v.string(),
+    status: v.union(
+      v.literal("held"),
+      v.literal("released"),
+      v.literal("expired"),
+    ),
+    acquiredAt: v.number(),
+    releasedAt: v.optional(v.number()),
+    ttlMs: v.number(), // default 300000 (5 min)
+  })
+    .index("by_resource_status", ["resourceId", "status"])
+    .index("by_agent", ["agentId"]),
+
+  taskGraph: defineTable({
+    commandId: v.string(),
+    agentId: v.string(),
+    taskName: v.string(),
+    phase: v.number(),
+    dependsOn: v.array(v.string()), // array of taskGraph IDs
+    status: v.union(
+      v.literal("pending"),
+      v.literal("ready"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    input: v.optional(v.any()),
+    output: v.optional(v.any()),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_command", ["commandId"])
+    .index("by_agent_command", ["agentId", "commandId"])
+    .index("by_command_status", ["commandId", "status"]),
 });

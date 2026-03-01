@@ -223,3 +223,79 @@ export const triggerAnomaly = internalMutation({
     return { ok: true, scenario: args.scenario, triggeredAt: now };
   },
 });
+
+export const resolveAnomaly = internalMutation({
+  args: {
+    roomId: v.id("rooms"),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Find Environmental Monitoring device in this room
+    const devices = await ctx.db
+      .query("devices")
+      .withIndex("by_room", (q) => q.eq("roomId", args.roomId))
+      .collect();
+
+    const envDevice = devices.find((d) => d.name === "Environmental Monitoring");
+
+    if (envDevice) {
+      const existingFields = envDevice.fields as Record<string, unknown>;
+      const safeFields = {
+        ...existingFields,
+        co2: 450,
+        particulate: 25,
+        temperature: 70.2,
+        humidity: 45,
+        pressureDifferential: 0.05,
+        allWithinRange: true,
+        riskLevel: "normal",
+        status: "normal",
+        outOfRangeFields: [],
+      };
+
+      await ctx.db.patch(envDevice._id, {
+        status: "idle",
+        currentAction: undefined,
+        lastError: undefined,
+        fields: safeFields,
+        updatedAt: now,
+      });
+
+      // Insert a clean environmentReadings record
+      await ctx.db.insert("environmentReadings", {
+        roomId: args.roomId,
+        co2: 450,
+        particulateCount: 25,
+        temperature: 70.2,
+        humidity: 45,
+        pressureDifferential: 0.05,
+        allWithinRange: true,
+        outOfRangeFields: [],
+        timestamp: now,
+      });
+    }
+
+    // Reset all devices in room to idle
+    for (const device of devices) {
+      if (device._id !== envDevice?._id) {
+        await ctx.db.patch(device._id, {
+          status: "idle",
+          currentAction: undefined,
+          lastError: undefined,
+          updatedAt: now,
+        });
+      }
+    }
+
+    // Set room to ready
+    const readyCount = devices.length;
+    await ctx.db.patch(args.roomId, {
+      status: "ready",
+      devicesReady: readyCount,
+      updatedAt: now,
+    });
+
+    return { ok: true, resolvedAt: now };
+  },
+});
