@@ -123,6 +123,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  try {
+    new URL(baseUrl);
+  } catch {
+    return Response.json(
+      { error: `Invalid baseUrl: "${baseUrl}". Must be a full URL like https://example.com` },
+      { status: 400 }
+    );
+  }
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {

@@ -174,8 +174,20 @@ export default function AgentPage() {
   // ─── Learn handler ────────────────────────────────────────────────
 
   const handleLearn = async () => {
-    if (!learnBaseUrl.trim()) {
+    let url = learnBaseUrl.trim()
+    if (!url) {
       setError('Enter a base URL first')
+      return
+    }
+    // Auto-prepend https:// if missing
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url
+      setLearnBaseUrl(url)
+    }
+    try {
+      new URL(url)
+    } catch {
+      setError('Invalid URL. Enter a full URL like https://example.com')
       return
     }
 
@@ -197,7 +209,7 @@ export default function AgentPage() {
     abortRef.current = controller
 
     try {
-      const body = { baseUrl: learnBaseUrl.replace(/\/$/, ''), routes }
+      const body = { baseUrl: url.replace(/\/$/, ''), routes }
       console.log('[Learn] POST /api/learn', body)
       const res = await fetch('/api/learn', {
         method: 'POST',
