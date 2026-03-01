@@ -32,8 +32,8 @@ interface Alert {
 
 export default function EnvironmentalMonitoring() {
   const [sensors, setSensors] = useState<Sensor[]>([
-    { id: 'ENV-001', name: 'OR-1 Main', location: 'Operating Room 1', type: 'Air Quality', status: 'online', particulate: 42, temperature: 68.5, humidity: 45, co2: 620, lastSeen: '< 1 min', firmware: 'v2.4.1', riskLevel: 'low' },
-    { id: 'ENV-002', name: 'OR-2 Main', location: 'Operating Room 2', type: 'Air Quality', status: 'online', particulate: 55, temperature: 69.1, humidity: 48, co2: 580, lastSeen: '< 1 min', firmware: 'v2.4.1', riskLevel: 'low' },
+    { id: 'ENV-001', name: 'OR-1 Main', location: 'Operating Room 1', type: 'Air Quality', status: 'online', particulate: 46, temperature: 67.4, humidity: 45, co2: 593, lastSeen: '< 1 min', firmware: 'v2.4.1', riskLevel: 'low' },
+    { id: 'ENV-002', name: 'OR-2 Main', location: 'Operating Room 2', type: 'Air Quality', status: 'online', particulate: 40, temperature: 69.5, humidity: 48, co2: 583, lastSeen: '< 1 min', firmware: 'v2.4.1', riskLevel: 'low' },
     { id: 'ENV-003', name: 'OR-3 Main', location: 'Operating Room 3', type: 'Air Quality', status: 'warning', particulate: 95, temperature: 71.2, humidity: 52, co2: 750, lastSeen: '2 min', firmware: 'v2.3.0', riskLevel: 'high' },
     { id: 'ENV-004', name: 'PACU Sensor', location: 'Post-Anesthesia Care', type: 'Air Quality', status: 'online', particulate: 35, temperature: 70.0, humidity: 42, co2: 540, lastSeen: '< 1 min', firmware: 'v2.4.1', riskLevel: 'low' },
     { id: 'ENV-005', name: 'Pre-Op Area', location: 'Pre-Operative Hold', type: 'Air Quality', status: 'offline', particulate: 0, temperature: 0, humidity: 0, co2: 0, lastSeen: '15 min', firmware: 'v2.2.0', riskLevel: 'medium' },
@@ -162,7 +162,7 @@ export default function EnvironmentalMonitoring() {
       setAnomalyActive(false)
       setSensors(prev => prev.map(sensor => {
         if (sensor.id !== 'ENV-003') return sensor
-        return { ...sensor, particulate: 48, co2: 590, temperature: 70.1, riskLevel: 'low' as const, status: 'online' as const }
+        return { ...sensor, particulate: 46, co2: 593, temperature: 67.4, riskLevel: 'low' as const, status: 'online' as const }
       }))
       setAlerts(prev => [
         { id: Date.now(), type: 'info' as const, message: 'OR-3 air quality returned to normal', sensor: 'ENV-003', time: 'just now', acknowledged: false },
@@ -170,7 +170,7 @@ export default function EnvironmentalMonitoring() {
       ])
       // Restore OR-3 scheduling status
       updateDeviceFields({ deviceId: DEVICE_IDS.SCHEDULING, fields: { roomStatus_OR3: 'Ready', envAlert_OR3: 'clear' } })
-    }, 55000) // 15s + 40s
+    }, 45000) // 15s + 30s
 
     return () => { clearTimeout(spikeTimer); clearTimeout(recoverTimer) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
