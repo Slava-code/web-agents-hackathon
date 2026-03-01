@@ -157,6 +157,219 @@ http.route({
   handler: optionsHandler(),
 });
 
+// --- POST /action-log ---
+
+http.route({
+  path: "/action-log",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { deviceId, commandId, action, result, reasoning } = body;
+
+      if (!deviceId || !commandId || !action || !result) {
+        return jsonResponse(
+          { error: "deviceId, commandId, action, and result are required" },
+          400,
+        );
+      }
+
+      const validResults = ["success", "failure", "in_progress"];
+      if (!validResults.includes(result)) {
+        return jsonResponse(
+          { error: `Invalid result. Allowed: ${validResults.join(", ")}` },
+          400,
+        );
+      }
+
+      const logId = await ctx.runMutation(api.actionLogs.log, {
+        deviceId: deviceId as Id<"devices">,
+        commandId: commandId as Id<"commands">,
+        action,
+        result,
+        ...(reasoning !== undefined ? { reasoning } : {}),
+      });
+
+      return jsonResponse({ ok: true, logId });
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
+http.route({
+  path: "/action-log",
+  method: "OPTIONS",
+  handler: optionsHandler(),
+});
+
+// --- POST /discovery-start ---
+
+http.route({
+  path: "/discovery-start",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { mode, baseUrl, pages } = body;
+
+      if (!mode || !baseUrl || !Array.isArray(pages)) {
+        return jsonResponse(
+          { error: "mode, baseUrl, and pages[] are required" },
+          400,
+        );
+      }
+
+      const result = await ctx.runMutation(api.discovery.createSession, {
+        mode,
+        baseUrl,
+        pages,
+      });
+
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
+http.route({
+  path: "/discovery-start",
+  method: "OPTIONS",
+  handler: optionsHandler(),
+});
+
+// --- POST /discovery-log ---
+
+http.route({
+  path: "/discovery-log",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { sessionId, pageUrl, level, message, detail } = body;
+
+      if (!sessionId || !level || !message) {
+        return jsonResponse(
+          { error: "sessionId, level, and message are required" },
+          400,
+        );
+      }
+
+      const logId = await ctx.runMutation(internal.discovery.logActivity, {
+        sessionId,
+        pageUrl,
+        level,
+        message,
+        detail,
+      });
+
+      return jsonResponse({ ok: true, logId });
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
+http.route({
+  path: "/discovery-log",
+  method: "OPTIONS",
+  handler: optionsHandler(),
+});
+
+// --- POST /discovery-update ---
+
+http.route({
+  path: "/discovery-update",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { sessionId, pageUrl, status, discoveredFields, inferredSchema, extractionScript, extractedData, error } = body;
+
+      if (!sessionId || !pageUrl || !status) {
+        return jsonResponse(
+          { error: "sessionId, pageUrl, and status are required" },
+          400,
+        );
+      }
+
+      const result = await ctx.runMutation(internal.discovery.updatePageStatus, {
+        sessionId,
+        pageUrl,
+        status,
+        ...(discoveredFields !== undefined ? { discoveredFields } : {}),
+        ...(inferredSchema !== undefined ? { inferredSchema } : {}),
+        ...(extractionScript !== undefined ? { extractionScript } : {}),
+        ...(extractedData !== undefined ? { extractedData } : {}),
+        ...(error !== undefined ? { error } : {}),
+      });
+
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
+http.route({
+  path: "/discovery-update",
+  method: "OPTIONS",
+  handler: optionsHandler(),
+});
+
+// --- POST /discovery-complete ---
+
+http.route({
+  path: "/discovery-complete",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { sessionId } = body;
+
+      if (!sessionId) {
+        return jsonResponse({ error: "sessionId is required" }, 400);
+      }
+
+      const result = await ctx.runMutation(internal.discovery.completeSession, {
+        sessionId,
+      });
+
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
+http.route({
+  path: "/discovery-complete",
+  method: "OPTIONS",
+  handler: optionsHandler(),
+});
+
+// --- POST /discovery-reset ---
+
+http.route({
+  path: "/discovery-reset",
+  method: "POST",
+  handler: httpAction(async (ctx) => {
+    try {
+      const result = await ctx.runMutation(api.discovery.resetDiscovery, {});
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
+http.route({
+  path: "/discovery-reset",
+  method: "OPTIONS",
+  handler: optionsHandler(),
+});
+
 // --- POST /seed ---
 
 http.route({

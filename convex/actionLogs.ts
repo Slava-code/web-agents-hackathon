@@ -22,6 +22,7 @@ export const log = mutation({
       v.literal("failure"),
       v.literal("in_progress"),
     ),
+    reasoning: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("actionLogs", {
@@ -29,6 +30,7 @@ export const log = mutation({
       commandId: args.commandId,
       action: args.action,
       result: args.result,
+      reasoning: args.reasoning,
       timestamp: Date.now(),
     });
   },

@@ -12,6 +12,7 @@ import type * as actionLogs from "../actionLogs.js";
 import type * as commands from "../commands.js";
 import type * as deviceMutations from "../deviceMutations.js";
 import type * as devices from "../devices.js";
+import type * as discovery from "../discovery.js";
 import type * as http from "../http.js";
 import type * as roomQueries from "../roomQueries.js";
 import type * as rooms from "../rooms.js";
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   commands: typeof commands;
   deviceMutations: typeof deviceMutations;
   devices: typeof devices;
+  discovery: typeof discovery;
   http: typeof http;
   roomQueries: typeof roomQueries;
   rooms: typeof rooms;

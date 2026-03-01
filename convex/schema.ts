@@ -62,10 +62,66 @@ export default defineSchema({
       v.literal("failure"),
       v.literal("in_progress"),
     ),
+    reasoning: v.optional(v.string()),
     timestamp: v.number(),
   })
     .index("by_device", ["deviceId"])
     .index("by_command", ["commandId"]),
+
+  // --- Discovery tables ---
+
+  discoverySessions: defineTable({
+    mode: v.union(v.literal("mock"), v.literal("live")),
+    baseUrl: v.string(),
+    status: v.union(
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+    ),
+    totalPages: v.number(),
+    completedPages: v.number(),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    elapsedMs: v.optional(v.number()),
+  }),
+
+  discoveryPages: defineTable({
+    sessionId: v.string(),
+    pageUrl: v.string(),
+    pageName: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("visiting"),
+      v.literal("analyzing"),
+      v.literal("schema_created"),
+      v.literal("extracting"),
+      v.literal("complete"),
+      v.literal("error"),
+    ),
+    discoveredFields: v.optional(v.any()),
+    inferredSchema: v.optional(v.any()),
+    extractionScript: v.optional(v.string()),
+    extractedData: v.optional(v.any()),
+    error: v.optional(v.string()),
+    updatedAt: v.number(),
+  }).index("by_session", ["sessionId"]),
+
+  discoveryLogs: defineTable({
+    sessionId: v.string(),
+    pageUrl: v.optional(v.string()),
+    level: v.union(
+      v.literal("info"),
+      v.literal("agent_thought"),
+      v.literal("success"),
+      v.literal("error"),
+      v.literal("schema"),
+      v.literal("script"),
+      v.literal("data"),
+    ),
+    message: v.string(),
+    detail: v.optional(v.string()),
+    timestamp: v.number(),
+  }).index("by_session", ["sessionId"]),
 
   environmentReadings: defineTable({
     roomId: v.id("rooms"),

@@ -69,7 +69,22 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="mt-8">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link href="/command-center" className="group block">
+            <div className="bg-gradient-to-r from-emerald-600/20 to-cyan-600/20 rounded-xl p-6 border border-emerald-500/30 hover:border-emerald-400/50 transition-all">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="h-2 w-16 rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500" />
+                <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Mission Control</span>
+              </div>
+              <h3 className="text-lg font-semibold text-white mb-1 group-hover:text-emerald-400 transition-colors">
+                Command Center
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Issue commands, monitor room status, and watch live agent reasoning in real-time.
+              </p>
+            </div>
+          </Link>
+
           <Link href="/agent" className="group block">
             <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-xl p-6 border border-blue-500/30 hover:border-blue-400/50 transition-all">
               <div className="flex items-center gap-3 mb-2">

@@ -856,6 +856,97 @@ else
 fi
 
 ###############################################################################
+# SECTION 13 — POST /action-log HTTP endpoint
+###############################################################################
+
+_log_header "SECTION 13: POST /action-log"
+
+# Reset all devices to idle, submit a fresh command for action-log tests
+echo "  Resetting all devices to idle..."
+for did in "${ALL_DEVICE_IDS[@]}"; do
+  http_post "/device-update" "{\"deviceId\":\"$did\",\"status\":\"idle\"}" >/dev/null
+done
+settle
+
+CMD_ID_LOG=$(convex_run "commands:submit" "{\"text\":\"Action log test command\",\"roomId\":\"$ROOM_ID\"}")
+CMD_ID_LOG=$(echo "$CMD_ID_LOG" | jq -r '.')
+settle
+
+# 13.1: POST /action-log with reasoning -> ok + logId
+_log_test "POST /action-log with reasoning returns ok and logId"
+RESP=$(http_post "/action-log" "{\"deviceId\":\"$DEV_UV_ROBOT\",\"commandId\":\"$CMD_ID_LOG\",\"action\":\"Initiating UV cycle\",\"result\":\"in_progress\",\"reasoning\":\"Room has 4 devices. Starting with UV sterilization first because it takes longest.\"}")
+OK=$(echo "$RESP" | jq -r '.ok')
+LOG_ID_13=$(echo "$RESP" | jq -r '.logId')
+
+if [ "$OK" = "true" ]; then
+  _pass "Response ok=true"
+else
+  _fail "Response not ok" "$RESP"
+fi
+
+if [ -n "$LOG_ID_13" ] && [ "$LOG_ID_13" != "null" ]; then
+  _pass "logId returned: $LOG_ID_13"
+else
+  _fail "logId missing from response" "$RESP"
+fi
+
+# 13.2: byCommand returns entry with reasoning field populated
+_log_test "actionLogs:byCommand returns entry with reasoning field"
+LOGS=$(convex_run "actionLogs:byCommand" "{\"commandId\":\"$CMD_ID_LOG\"}")
+REASONING=$(echo "$LOGS" | jq -r '.[0].reasoning // empty')
+
+if [ -n "$REASONING" ]; then
+  _pass "reasoning field populated: '${REASONING:0:60}...'"
+else
+  _fail "reasoning field empty or missing" "$(echo "$LOGS" | jq '.[0]')"
+fi
+
+# 13.3: POST /action-log without reasoning -> ok (backward compat)
+_log_test "POST /action-log without reasoning returns ok (backward compat)"
+RESP=$(http_post "/action-log" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"commandId\":\"$CMD_ID_LOG\",\"action\":\"Dispatching TUG\",\"result\":\"success\"}")
+OK=$(echo "$RESP" | jq -r '.ok')
+
+if [ "$OK" = "true" ]; then
+  _pass "Response ok=true without reasoning"
+else
+  _fail "Response not ok without reasoning" "$RESP"
+fi
+
+# 13.4: POST /action-log with missing required fields -> error
+_log_test "POST /action-log with missing required fields returns error"
+RESP=$(http_post "/action-log" "{\"deviceId\":\"$DEV_UV_ROBOT\"}")
+ERR=$(echo "$RESP" | jq -r '.error // empty')
+
+if [ -n "$ERR" ]; then
+  _pass "Error returned for missing fields: $ERR"
+else
+  _fail "Expected error for missing fields" "$RESP"
+fi
+
+# 13.5: POST /action-log with invalid result value -> error
+_log_test "POST /action-log with invalid result value returns error"
+RESP=$(http_post "/action-log" "{\"deviceId\":\"$DEV_UV_ROBOT\",\"commandId\":\"$CMD_ID_LOG\",\"action\":\"test\",\"result\":\"invalid_value\"}")
+ERR=$(echo "$RESP" | jq -r '.error // empty')
+
+if [ -n "$ERR" ]; then
+  _pass "Error returned for invalid result: $ERR"
+else
+  _fail "Expected error for invalid result" "$RESP"
+fi
+
+# 13.6: OPTIONS /action-log returns 204
+_log_test "OPTIONS /action-log returns CORS 204"
+CORS_RESP=$(curl -s -o /dev/null -w "%{http_code}" -X OPTIONS "${SITE_URL}/action-log" \
+  -H "Origin: http://localhost:3000" \
+  -H "Access-Control-Request-Method: POST")
+
+if [ "$CORS_RESP" = "204" ]; then
+  _pass "OPTIONS /action-log returned 204"
+else
+  _fail "OPTIONS status code wrong" "expected 204, got $CORS_RESP"
+fi
+
+###############################################################################
 # Summary
 ###############################################################################
 

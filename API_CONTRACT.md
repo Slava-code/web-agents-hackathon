@@ -135,6 +135,32 @@ Trigger an anomaly scenario on a room's devices for demo purposes.
 
 ---
 
+## POST `/action-log`
+
+Post an agent action log entry (with optional chain-of-thought reasoning).
+
+**Request:**
+```json
+{
+  "deviceId": "<Id<devices>>",
+  "commandId": "<Id<commands>>",
+  "action": "string — what the agent did",
+  "result": "success" | "failure" | "in_progress",
+  "reasoning": "(optional) string — agent's chain-of-thought"
+}
+```
+
+**Response (200):**
+```json
+{ "ok": true, "logId": "<Id<actionLogs>>" }
+```
+
+**Errors:**
+- `400` — missing `deviceId`, `commandId`, `action`, or `result`; or invalid `result` value
+- `500` — device or command ID not found
+
+---
+
 ## Seed Data IDs
 
 ### Rooms
@@ -203,4 +229,4 @@ const state = useQuery(api.roomQueries.getRoomStatePublic, {
 | `api.commands.getLatest` | query | `{ roomId }` |
 | `api.commands.submit` | mutation | `{ text, roomId }` |
 | `api.actionLogs.byCommand` | query | `{ commandId }` |
-| `api.actionLogs.log` | mutation | `{ deviceId, commandId, action, result }` |
+| `api.actionLogs.log` | mutation | `{ deviceId, commandId, action, result, reasoning? }` |
