@@ -15,6 +15,7 @@ interface TugBot {
   source: string
   destination: string
   battery: number
+  freezeAt?: number
 }
 
 const DESTINATIONS = ['Sterilization']
@@ -22,10 +23,10 @@ const SOURCES = ['OR-1', 'OR-2', 'OR-3', 'OR-4', 'OR-5', 'OR-6']
 
 export default function TUGDashboard() {
   const [bots, setBots] = useState<TugBot[]>([
-    { id: 'TUG-01', name: 'Alpha', status: 'EN_ROUTE', progress: 45, source: 'OR-1', destination: 'Sterilization', battery: 94 },
+    { id: 'TUG-01', name: 'Alpha', status: 'EN_ROUTE', progress: 12, source: 'OR-1', destination: 'Sterilization', battery: 94, freezeAt: 67 },
     { id: 'TUG-02', name: 'Beta', status: 'IDLE', progress: 0, source: 'OR-3', destination: 'Sterilization', battery: 78 },
-    { id: 'TUG-03', name: 'Gamma', status: 'RETURNING', progress: 65, source: 'OR-2', destination: 'Sterilization', battery: 62 },
-    { id: 'TUG-04', name: 'Delta', status: 'RETURNING', progress: 80, source: 'OR-4', destination: 'Sterilization', battery: 55 },
+    { id: 'TUG-03', name: 'Gamma', status: 'RETURNING', progress: 18, source: 'OR-2', destination: 'Sterilization', battery: 62, freezeAt: 52 },
+    { id: 'TUG-04', name: 'Delta', status: 'EN_ROUTE', progress: 35, source: 'OR-4', destination: 'Sterilization', battery: 55, freezeAt: 83 },
   ])
 
   const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "TUG Fleet Monitor")
@@ -36,25 +37,34 @@ export default function TUGDashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  // Simulate bot movement
+  // Simulate bot movement — bots with freezeAt slow down and stop at their cap
   useEffect(() => {
     const interval = setInterval(() => {
       setBots(prev => prev.map(bot => {
-        if (bot.status === 'EN_ROUTE') {
-          const newProgress = bot.progress + 2
-          if (newProgress >= 100) {
-            return { ...bot, progress: 100, status: 'ARRIVED' }
-          }
+        if (bot.status !== 'EN_ROUTE' && bot.status !== 'RETURNING') return bot
+        const baseIncrement = bot.status === 'EN_ROUTE' ? 2 : 3
+
+        if (bot.freezeAt != null) {
+          if (bot.progress >= bot.freezeAt) return bot
+          const ratio = bot.progress / bot.freezeAt
+          const increment = baseIncrement * (1 - ratio)
+          if (increment < 0.1) return bot
+          const newProgress = Math.min(
+            parseFloat((bot.progress + increment).toFixed(1)),
+            bot.freezeAt
+          )
           return { ...bot, progress: newProgress }
         }
-        if (bot.status === 'RETURNING') {
-          const newProgress = bot.progress + 3
-          if (newProgress >= 100) {
-            return { ...bot, progress: 0, status: 'IDLE' }
-          }
-          return { ...bot, progress: newProgress }
+
+        // Normal progression (deployed bots without a freeze cap)
+        const newProgress = bot.progress + baseIncrement
+        if (bot.status === 'EN_ROUTE' && newProgress >= 100) {
+          return { ...bot, progress: 100, status: 'ARRIVED' }
         }
-        return bot
+        if (bot.status === 'RETURNING' && newProgress >= 100) {
+          return { ...bot, progress: 0, status: 'IDLE' }
+        }
+        return { ...bot, progress: newProgress }
       }))
     }, 200)
     return () => clearInterval(interval)
@@ -249,7 +259,7 @@ export default function TUGDashboard() {
                           data-testid={`bot-progress-${bot.id}`}
                         />
                       </div>
-                      <span className="text-sm font-mono text-slate-600 w-10 text-right">{bot.progress}%</span>
+                      <span className="text-sm font-mono text-slate-600 w-10 text-right">{Math.round(bot.progress)}%</span>
                     </div>
                   )}
                 </div>
