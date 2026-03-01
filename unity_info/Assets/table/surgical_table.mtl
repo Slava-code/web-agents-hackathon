@@ -1,0 +1,29 @@
+# Surgical Table Materials
+
+newmtl Steel_Top
+Kd 0.75 0.78 0.80
+Ks 0.9 0.9 0.9
+Ns 200
+Ka 0.1 0.1 0.1
+d 1.0
+
+newmtl Steel_Post
+Kd 0.60 0.62 0.65
+Ks 0.8 0.8 0.8
+Ns 150
+Ka 0.1 0.1 0.1
+d 1.0
+
+newmtl Steel_Base
+Kd 0.55 0.58 0.60
+Ks 0.7 0.7 0.7
+Ns 120
+Ka 0.1 0.1 0.1
+d 1.0
+
+newmtl Wheel_Black
+Kd 0.05 0.05 0.05
+Ks 0.2 0.2 0.2
+Ns 30
+Ka 0.02 0.02 0.02
+d 1.0

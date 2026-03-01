@@ -1,0 +1,43 @@
+# TUG Robot Materials
+
+newmtl Base_Dark
+Kd 0.12 0.12 0.14
+Ks 0.2 0.2 0.2
+Ns 60
+d 1.0
+
+newmtl Wheel_Black
+Kd 0.05 0.05 0.05
+Ks 0.1 0.1 0.1
+Ns 20
+d 1.0
+
+newmtl Body_White
+Kd 0.85 0.87 0.90
+Ks 0.4 0.4 0.4
+Ns 100
+d 1.0
+
+newmtl Panel_DarkGray
+Kd 0.22 0.24 0.27
+Ks 0.3 0.3 0.3
+Ns 80
+d 1.0
+
+newmtl Sensor_Emissive
+Kd 0.0 0.7 0.9
+Ks 0.5 0.5 0.5
+Ns 100
+d 1.0
+
+newmtl Status_Emissive
+Kd 0.0 0.9 0.4
+Ks 0.5 0.5 0.5
+Ns 100
+d 1.0
+
+newmtl Door_Accent
+Kd 0.35 0.37 0.40
+Ks 0.2 0.2 0.2
+Ns 60
+d 1.0
