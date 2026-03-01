@@ -490,6 +490,56 @@ const state = useQuery(api.roomQueries.getRoomStatePublic, {
 
 ---
 
+---
+
+# Next.js API Routes
+
+## POST `/api/orchestrate`
+
+SSE streaming orchestrator for the full 4-agent emergency response scenario. Triggers anomaly, creates task graph, launches BrowserUse agents sequentially for each phase, and streams progress events.
+
+**Request:**
+```json
+{
+  "roomId": "<Id<rooms>>",
+  "scenario": "ventilation_failure"  // which anomaly to trigger (default: ventilation_failure)
+}
+```
+
+**Response:** SSE stream (`text/event-stream`)
+
+Each SSE event is a JSON object on a `data:` line. Event types:
+
+| Event | Fields | When |
+|-------|--------|------|
+| `scenario_start` | `commandId`, `roomId`, `tasks`, `taskCount` | Task graph created |
+| `anomaly_triggered` | `scenario` | Anomaly triggered on room |
+| `phase_start` | `phase`, `agentId`, `taskName` | Agent's task becomes ready |
+| `agent_start` | `phase`, `sessionId`, `liveUrl` | BrowserUse session launched |
+| `agent_status` | `phase`, `status` | BrowserUse status change |
+| `phase_complete` | `phase`, `agentId`, `output`, `cost` | Agent finished successfully |
+| `phase_error` | `phase`, `agentId`, `error` | Agent failed |
+| `scenario_complete` | `commandId`, `totalCost`, `elapsedMs`, `allDone`, `failed` | All phases done |
+| `error` | `message` | Fatal error |
+
+**Phase order:** ENV (1) → TUG (2) → UV (3) → EHR (4)
+
+**Side effects:**
+- Triggers anomaly on room devices
+- Creates coordination task graph (4 tasks with dependencies)
+- Claims/releases device locks for each agent
+- Launches BrowserUse sessions (bu-mini model)
+- Posts agent messages to coordination bus
+- Auto-resolves anomaly when all 4 tasks complete
+
+**Cost:** ~$0.05–0.15 per run (4 bu-mini BrowserUse sessions)
+
+**Errors:**
+- `400` — missing `roomId`
+- `500` — `BROWSER_USE_API_KEY` not set
+
+---
+
 ## Convex Client Queries (React Dashboard)
 
 | Function | Type | Args |

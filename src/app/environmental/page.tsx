@@ -53,7 +53,7 @@ export default function EnvironmentalMonitoring() {
   const [selectedSensor, setSelectedSensor] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'sensors' | 'alerts' | 'settings'>('overview')
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
   const [thresholds, setThresholds] = useState({
     particulate: 100,
     co2: 700,
@@ -127,6 +127,7 @@ export default function EnvironmentalMonitoring() {
   ]
 
   useEffect(() => {
+    setCurrentTime(new Date())
     const interval = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(interval)
   }, [])
@@ -245,7 +246,7 @@ export default function EnvironmentalMonitoring() {
             </div>
             <div className="w-px h-6 bg-white/20" />
             <span className="text-sm text-white/80 font-mono">
-              {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              {currentTime?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) ?? '--:--'}
             </span>
           </div>
         </div>
@@ -732,7 +733,7 @@ export default function EnvironmentalMonitoring() {
       <footer className="bg-white border-t border-gray-200 px-6 py-3 mt-6">
         <div className="flex items-center justify-between text-xs text-gray-500">
           <span>EnviroSense IoT Security v2.4.1</span>
-          <span>Last sync: {currentTime.toLocaleTimeString()}</span>
+          <span>Last sync: {currentTime?.toLocaleTimeString() ?? '--:--:--'}</span>
           <span>Memorial General Hospital</span>
         </div>
       </footer>

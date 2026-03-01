@@ -62,6 +62,17 @@ type BrowserEventData =
   | { type: 'done'; status: string; output: string | null; cost: string | null }
   | { type: 'error'; message: string }
 
+type OrchestrateEvent =
+  | { type: 'scenario_start'; commandId: string; roomId: string; tasks: Record<string, string>; taskCount: number }
+  | { type: 'anomaly_triggered'; scenario: string }
+  | { type: 'phase_start'; phase: number; agentId: string; taskName: string }
+  | { type: 'agent_start'; phase: number; sessionId: string; liveUrl: string | null }
+  | { type: 'agent_status'; phase: number; status: string; cost?: string }
+  | { type: 'phase_complete'; phase: number; agentId: string; output: unknown; cost: string }
+  | { type: 'phase_error'; phase: number; agentId: string; error: string }
+  | { type: 'scenario_complete'; commandId: string; totalCost: string; elapsedMs: number; allDone: boolean; failed: boolean }
+  | { type: 'error'; message: string }
+
 interface BrowserEvent {
   id: number
   timestamp: number
@@ -167,6 +178,16 @@ export default function CommandCenter() {
   const [browserError, setBrowserError] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   let nextEventId = useRef(0)
+
+  // --- Orchestration state ---
+  const [orchestrating, setOrchestrating] = useState(false)
+  const [orchestratePhase, setOrchestratePhase] = useState(0)
+  const [orchestrateTotalPhases] = useState(4)
+  const [orchestrateEvents, setOrchestrateEvents] = useState<OrchestrateEvent[]>([])
+  const [orchestrateCost, setOrchestrateCost] = useState<string | null>(null)
+  const [orchestrateDone, setOrchestrateDone] = useState(false)
+  const [orchestrateFailed, setOrchestrateFailed] = useState(false)
+  const orchestrateAbortRef = useRef<AbortController | null>(null)
 
   // --- SSE stream consumer (simplified from /agent) ---
   async function consumeStream(res: Response) {
@@ -302,6 +323,118 @@ export default function CommandCenter() {
     }
     setTriggerStatus('All devices reset to idle')
     setTimeout(() => setTriggerStatus(null), 2000)
+  }
+
+  // --- Emergency Response Orchestrator ---
+  async function handleEmergencyResponse() {
+    setOrchestrating(true)
+    setOrchestratePhase(0)
+    setOrchestrateEvents([])
+    setOrchestrateCost(null)
+    setOrchestrateDone(false)
+    setOrchestrateFailed(false)
+    setBrowserStatus('starting')
+    setLiveUrl(null)
+
+    const controller = new AbortController()
+    orchestrateAbortRef.current = controller
+
+    try {
+      const res = await fetch('/api/orchestrate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: OR3_ID, scenario: 'ventilation_failure' }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok || !res.body) {
+        const errorBody = await res.text().catch(() => '')
+        setTriggerStatus(`Orchestrator failed: ${res.status} — ${errorBody || res.statusText}`)
+        setOrchestrating(false)
+        setBrowserStatus('error')
+        return
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const event = JSON.parse(line.slice(6)) as OrchestrateEvent
+            setOrchestrateEvents((prev) => [...prev, event])
+
+            // Also add to browser feed for the unified activity log
+            const id = nextEventId.current++
+            const timestamp = Date.now()
+
+            switch (event.type) {
+              case 'scenario_start':
+                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'session', id: event.commandId, status: 'running', liveUrl: null } }])
+                setBrowserStatus('running')
+                break
+              case 'phase_start':
+                setOrchestratePhase(event.phase)
+                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'status', status: `Phase ${event.phase}/4: ${event.taskName}`, output: null, cost: null } }])
+                break
+              case 'agent_start':
+                if (event.liveUrl) setLiveUrl(event.liveUrl)
+                break
+              case 'agent_status':
+                setBrowserStatus(event.status === 'running' ? 'running' : event.status)
+                break
+              case 'phase_complete':
+                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'status', status: `Phase ${event.phase} complete`, output: null, cost: event.cost } }])
+                setBrowserCost(event.cost)
+                break
+              case 'phase_error':
+                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'error', message: `Phase ${event.phase}: ${event.error}` } }])
+                setOrchestrateFailed(true)
+                break
+              case 'scenario_complete':
+                setOrchestrateCost(event.totalCost)
+                setOrchestrateDone(true)
+                setOrchestrateFailed(event.failed)
+                setBrowserCost(event.totalCost)
+                setBrowserStatus(event.allDone ? 'complete' : 'stopped')
+                setBrowserRunning(false)
+                setOrchestrating(false)
+                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'done', status: event.allDone ? 'complete' : 'partial', output: null, cost: event.totalCost } }])
+                break
+              case 'error':
+                setBrowserEvents((prev) => [...prev, { id, timestamp, data: { type: 'error', message: event.message } }])
+                setBrowserStatus('error')
+                setOrchestrating(false)
+                setOrchestrateFailed(true)
+                break
+            }
+          } catch {
+            /* skip malformed */
+          }
+        }
+      }
+    } catch (e: unknown) {
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        setTriggerStatus(e instanceof Error ? e.message : String(e))
+        setBrowserStatus('error')
+      }
+      setOrchestrating(false)
+    }
+  }
+
+  function handleStopOrchestrate() {
+    orchestrateAbortRef.current?.abort()
+    setOrchestrating(false)
+    setBrowserStatus('stopped')
   }
 
   // --- Unified feed ---
@@ -564,6 +697,81 @@ export default function CommandCenter() {
                   {devicesReady} / {latestCommand.deviceCount} devices ready
                   {latestCommand.elapsedMs != null &&
                     ` \u00B7 ${(latestCommand.elapsedMs / 1000).toFixed(1)}s elapsed`}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Emergency Response Orchestrator */}
+          <div className="bg-slate-900 rounded-lg border border-slate-800 p-5">
+            <h2 className="text-sm font-semibold tracking-wider text-slate-400 uppercase mb-3">
+              Emergency Response
+            </h2>
+            <div className="flex gap-2 mb-3">
+              <button
+                onClick={handleEmergencyResponse}
+                disabled={orchestrating || browserRunning}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-bold rounded-md transition-colors"
+              >
+                {orchestrating ? 'Running...' : 'Run Emergency Response'}
+              </button>
+              {orchestrating && (
+                <button
+                  onClick={handleStopOrchestrate}
+                  className="px-3 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 text-sm font-medium rounded-md transition-colors"
+                >
+                  Stop
+                </button>
+              )}
+            </div>
+
+            {/* Phase Progress Pipeline */}
+            {(orchestrating || orchestrateDone || orchestrateFailed) && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1">
+                  {[
+                    { label: 'ENV', agent: 'env-agent', phase: 1 },
+                    { label: 'TUG', agent: 'tug-agent', phase: 2 },
+                    { label: 'UV', agent: 'uv-agent', phase: 3 },
+                    { label: 'EHR', agent: 'ehr-agent', phase: 4 },
+                  ].map((step) => {
+                    const isComplete = orchestrateEvents.some(
+                      (e) => e.type === 'phase_complete' && e.phase === step.phase
+                    )
+                    const isError = orchestrateEvents.some(
+                      (e) => e.type === 'phase_error' && e.phase === step.phase
+                    )
+                    const isActive = orchestratePhase === step.phase && orchestrating
+                    const isPending = step.phase > orchestratePhase
+
+                    let bg = 'bg-slate-700 text-slate-500'
+                    if (isComplete) bg = 'bg-emerald-600/30 text-emerald-400 border-emerald-500/50'
+                    else if (isError) bg = 'bg-red-600/30 text-red-400 border-red-500/50'
+                    else if (isActive) bg = 'bg-blue-600/30 text-blue-400 border-blue-500/50 animate-pulse'
+                    else if (isPending) bg = 'bg-slate-800 text-slate-600'
+
+                    return (
+                      <div
+                        key={step.phase}
+                        className={`flex-1 text-center py-1.5 rounded text-xs font-bold border ${bg}`}
+                      >
+                        {step.label}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>
+                    Phase {orchestratePhase}/{orchestrateTotalPhases}
+                    {orchestrating && ' — running'}
+                    {orchestrateDone && !orchestrateFailed && ' — complete'}
+                    {orchestrateFailed && ' — failed'}
+                  </span>
+                  {orchestrateCost && (
+                    <span>
+                      Cost: <span className="text-green-400">${orchestrateCost}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             )}
