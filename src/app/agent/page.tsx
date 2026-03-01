@@ -31,8 +31,8 @@ interface DiffData {
 
 type EventData =
   | { type: 'session'; id: string; status: string; liveUrl: string | null; route?: string }
-  | { type: 'status'; status: string; output: string | null; cost: string | null }
-  | { type: 'done'; status: string; output: string | null; cost: string | null; inputTokens?: number; outputTokens?: number; summary?: Record<string, unknown> }
+  | { type: 'status'; status: string; output: unknown; cost: string | null }
+  | { type: 'done'; status: string; output: unknown; cost: string | null; inputTokens?: number; outputTokens?: number; summary?: Record<string, unknown> }
   | { type: 'error'; message: string }
   | { type: 'learning'; route: string; status: string; error?: string; rawOutput?: string }
   | { type: 'learned'; route: string; pagePurpose: string; fieldCount: number; fields: unknown[]; cost: string }
@@ -144,11 +144,11 @@ export default function AgentPage() {
             setStatus(data.status)
           } else if (data.type === 'status') {
             setStatus(data.status)
-            if (data.output) setOutput(data.output)
+            if (data.output) setOutput(typeof data.output === 'string' ? data.output : JSON.stringify(data.output, null, 2))
             if (data.cost) setCost(data.cost)
           } else if (data.type === 'done') {
             setStatus('complete')
-            if (data.output) setOutput(data.output)
+            if (data.output) setOutput(typeof data.output === 'string' ? data.output : JSON.stringify(data.output, null, 2))
             if (data.cost) setCost(data.cost)
             setIsRunning(false)
           } else if (data.type === 'error') {
