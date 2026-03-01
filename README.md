@@ -31,14 +31,18 @@ A collection of 5 simulated medical device vendor web dashboards for OR (Operati
 - Export data to JSON
 - Site and time range filters
 
-### 3. Sterilizer/Autoclave System (`/sterilizer`)
-**Style:** Legacy hospital CSSD (Central Sterile Services Department) interface
+### 3. Aethon TUG Robot (`/tug-robot`)
+**Style:** Modern fleet management - Dark theme with blue accents
 
 **Features:**
-- Cycle type selection
-- Temperature and pressure displays
-- Chamber status monitoring
-- Cycle history
+- Real-time robot status (idle, en-route, loading, unloading, charging)
+- Delivery queue with priority levels (STAT, routine, scheduled)
+- Battery monitoring with estimated range
+- Obstacle detection simulation
+- Trip statistics (count, distance, avg time, on-time rate)
+- Recent trips history
+- Start/Complete/Abort delivery controls
+- Send to charger functionality
 
 ### 4. Room Scheduling / EHR System (`/ehr`)
 **Style:** Epic/Cerner-inspired healthcare IT interface
@@ -112,8 +116,9 @@ src/
 │   ├── environmental/
 │   │   ├── page.tsx          # Environmental monitoring
 │   │   └── page.test.tsx     # 56 tests
-│   ├── sterilizer/
-│   │   └── page.tsx          # Sterilizer dashboard
+│   ├── tug-robot/
+│   │   ├── page.tsx          # TUG Robot dashboard
+│   │   └── page.test.tsx     # 42 tests
 │   ├── ehr/
 │   │   └── page.tsx          # EHR/Scheduling dashboard
 │   └── camera/
@@ -124,7 +129,8 @@ src/
 
 - **UV Robot Portal:** 48 tests covering all interactive elements
 - **Environmental Monitoring:** 56 tests covering all interactive elements
-- **Total:** 104 tests
+- **TUG Robot:** 42 tests covering all interactive elements
+- **Total:** 146 tests
 
 ## Design Philosophy
 

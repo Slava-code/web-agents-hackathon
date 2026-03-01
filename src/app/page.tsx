@@ -17,10 +17,10 @@ export default function Home() {
       color: 'from-green-600 to-teal-600',
     },
     {
-      name: 'Sterilizer/Autoclave System',
-      path: '/sterilizer',
-      description: 'Legacy CSSD - 2010-era enterprise look',
-      color: 'from-blue-700 to-gray-600',
+      name: 'Aethon TUG Robot',
+      path: '/tug-robot',
+      description: 'Autonomous mobile robot - Delivery tracking, fleet management',
+      color: 'from-blue-500 to-slate-700',
     },
     {
       name: 'Room Scheduling / EHR System',
