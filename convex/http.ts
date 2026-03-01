@@ -117,6 +117,46 @@ http.route({
   }),
 });
 
+// --- POST /trigger-anomaly ---
+
+http.route({
+  path: "/trigger-anomaly",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    try {
+      const body = await request.json();
+      const { roomId, scenario } = body;
+
+      if (!roomId || !scenario) {
+        return jsonResponse({ error: "roomId and scenario are required" }, 400);
+      }
+
+      const allowedScenarios = ["ventilation_failure", "battery_failure", "co2_spike"];
+      if (!allowedScenarios.includes(scenario)) {
+        return jsonResponse(
+          { error: `Invalid scenario. Allowed: ${allowedScenarios.join(", ")}` },
+          400,
+        );
+      }
+
+      const result = await ctx.runMutation(internal.deviceMutations.triggerAnomaly, {
+        roomId: roomId as Id<"rooms">,
+        scenario,
+      });
+
+      return jsonResponse(result);
+    } catch (e: any) {
+      return jsonResponse({ error: e.message }, 500);
+    }
+  }),
+});
+
+http.route({
+  path: "/trigger-anomaly",
+  method: "OPTIONS",
+  handler: optionsHandler(),
+});
+
 // --- POST /seed ---
 
 http.route({

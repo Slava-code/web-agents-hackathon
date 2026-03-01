@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
+import { useState, useEffect } from 'react'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
+import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 interface Patient {
   mrn: string
@@ -134,6 +136,23 @@ export default function EHRSystem() {
     }
   ])
 
+  // Convex real-time overlay
+  const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "Room Scheduling")
+
+  // Sync Convex fields → local room state for OR-3
+  useEffect(() => {
+    if (convexState.isLoading || convexState.status === 'idle') return
+    const f = convexState.fields
+
+    setRooms(prev => prev.map(room => {
+      if (room.id !== 'OR-3') return room
+      return {
+        ...room,
+        status: typeof f.roomStatus === 'string' ? f.roomStatus as Room['status'] : room.status,
+      }
+    }))
+  }, [convexState.status, convexState.fields, convexState.isLoading])
+
   const currentRoom = rooms.find(r => r.id === selectedRoom)!
 
   const handleStatusChange = (roomId: string, newStatus: Room['status']) => {
@@ -207,6 +226,7 @@ export default function EHRSystem() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-gray-800" style={{ fontFamily: 'Segoe UI, Tahoma, sans-serif' }}>
+      <ConvexStatusBadge state={convexState} />
       {/* Epic-style header */}
       <header className="bg-gradient-to-r from-[#1a4480] to-[#2c5aa0] text-white">
         <div className="flex items-center justify-between px-4 py-2">

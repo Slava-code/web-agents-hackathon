@@ -83,12 +83,12 @@ export default function VariableTrackerDashboard() {
     const warningCount = metrics.filter(m => m.status === 'warning').length
     const criticalCount = metrics.filter(m => m.status === 'critical').length
     updateDeviceStatus({
-      deviceId: DEVICE_IDS.VARIABLE_TRACKER,
+      deviceId: DEVICE_IDS.ENV_MONITORING,
       status: criticalCount > 0 ? 'error' : warningCount > 0 ? 'configuring' : 'ready',
       currentAction: `Monitoring ${metrics.length} variables`
     })
     updateDeviceFields({
-      deviceId: DEVICE_IDS.VARIABLE_TRACKER,
+      deviceId: DEVICE_IDS.ENV_MONITORING,
       fields: {
         totalVariables: metrics.length,
         normalCount,

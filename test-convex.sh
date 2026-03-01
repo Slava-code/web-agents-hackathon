@@ -108,20 +108,24 @@ DEVICE_COUNT=$(echo "$DEVICE_IDS_JSON" | jq 'length')
 
 echo "  Found $DEVICE_COUNT devices in OR-3"
 
-if [ "$DEVICE_COUNT" -lt 2 ]; then
-  echo "FATAL: Expected at least 2 devices in OR-3, got $DEVICE_COUNT"
+if [ "$DEVICE_COUNT" -lt 4 ]; then
+  echo "FATAL: Expected at least 4 devices in OR-3, got $DEVICE_COUNT"
   exit 1
 fi
 
 # Extract individual device IDs by name for targeted tests
 DEV_UV_ROBOT=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "UV Robot") | ._id')
 DEV_TUG_FLEET=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "TUG Fleet Monitor") | ._id')
+DEV_ENV_MON=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "Environmental Monitoring") | ._id')
+DEV_SCHEDULING=$(echo "$ROOM_STATE" | jq -r '.devices[] | select(.name == "Room Scheduling") | ._id')
 
-echo "  UV Robot          = $DEV_UV_ROBOT"
-echo "  TUG Fleet Monitor = $DEV_TUG_FLEET"
+echo "  UV Robot               = $DEV_UV_ROBOT"
+echo "  TUG Fleet Monitor      = $DEV_TUG_FLEET"
+echo "  Environmental Monitor  = $DEV_ENV_MON"
+echo "  Room Scheduling        = $DEV_SCHEDULING"
 
 # Build an array for iteration
-ALL_DEVICE_IDS=("$DEV_UV_ROBOT" "$DEV_TUG_FLEET")
+ALL_DEVICE_IDS=("$DEV_UV_ROBOT" "$DEV_TUG_FLEET" "$DEV_ENV_MON" "$DEV_SCHEDULING")
 
 ###############################################################################
 # CLEANUP helper — reset all devices to idle and room to idle
@@ -159,10 +163,10 @@ fi
 # Test 1.2: room-state includes devices array
 _log_test "GET /room-state includes devices array with correct count"
 DEV_LEN=$(echo "$RESP" | jq '.devices | length')
-if [ "$DEV_LEN" -eq 2 ]; then
-  _pass "devices array has 2 entries"
+if [ "$DEV_LEN" -eq 4 ]; then
+  _pass "devices array has 4 entries"
 else
-  _fail "devices array length wrong" "expected 2, got $DEV_LEN"
+  _fail "devices array length wrong" "expected 4, got $DEV_LEN"
 fi
 
 # Test 1.3: room-state includes environmentReadings (even if empty)
@@ -331,14 +335,14 @@ else
   _fail "rooms:get name wrong" "expected OR-3, got $RNAME"
 fi
 
-# Test 4.3: devices:listByRoom returns 2 devices
-_log_test "devices:listByRoom returns 2 devices for OR-3"
+# Test 4.3: devices:listByRoom returns 4 devices
+_log_test "devices:listByRoom returns 4 devices for OR-3"
 DEVS=$(convex_run "devices:listByRoom" "{\"roomId\":\"$ROOM_ID\"}")
 DCOUNT=$(echo "$DEVS" | jq 'length')
-if [ "$DCOUNT" -eq 2 ]; then
+if [ "$DCOUNT" -eq 4 ]; then
   _pass "devices:listByRoom returned $DCOUNT devices"
 else
-  _fail "devices:listByRoom count wrong" "expected 2, got $DCOUNT"
+  _fail "devices:listByRoom count wrong" "expected 4, got $DCOUNT"
 fi
 
 ###############################################################################
@@ -381,8 +385,8 @@ else
   _fail "Room status not preparing" "got '$RSTATUS'"
 fi
 
-if [ "$CONFIGURING_COUNT" -eq 2 ]; then
-  _pass "All 2 devices are 'configuring'"
+if [ "$CONFIGURING_COUNT" -eq 4 ]; then
+  _pass "All 4 devices are 'configuring'"
 else
   _fail "Not all devices configuring" "configuring count = $CONFIGURING_COUNT"
 fi
@@ -398,7 +402,7 @@ else
 fi
 
 # 5.4: Send device-update "ready" for first device — room should NOT be ready yet
-_log_test "Sending ready for 1/2 devices — room should NOT be ready yet"
+_log_test "Sending ready for 1/4 devices — room should NOT be ready yet"
 http_post "/device-update" "{\"deviceId\":\"${ALL_DEVICE_IDS[0]}\",\"status\":\"ready\"}" >/dev/null
 settle
 
@@ -414,14 +418,16 @@ fi
 
 # Room should still be preparing (not all ready yet)
 if [ "$RSTATUS" = "preparing" ]; then
-  _pass "Room still 'preparing' with 1/2 devices ready"
+  _pass "Room still 'preparing' with 1/4 devices ready"
 else
-  _fail "Room status unexpected with 1/2 ready" "got '$RSTATUS'"
+  _fail "Room status unexpected with 1/4 ready" "got '$RSTATUS'"
 fi
 
-# 5.5: Send the last device ready -> room should become "ready" and command "completed"
-_log_test "Sending last device ready — room should go 'ready', command 'completed' with elapsedMs"
+# 5.5: Send remaining devices ready -> room should become "ready" and command "completed"
+_log_test "Sending last 3 devices ready — room should go 'ready', command 'completed' with elapsedMs"
 http_post "/device-update" "{\"deviceId\":\"${ALL_DEVICE_IDS[1]}\",\"status\":\"ready\"}" >/dev/null
+http_post "/device-update" "{\"deviceId\":\"${ALL_DEVICE_IDS[2]}\",\"status\":\"ready\"}" >/dev/null
+http_post "/device-update" "{\"deviceId\":\"${ALL_DEVICE_IDS[3]}\",\"status\":\"ready\"}" >/dev/null
 settle
 
 RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
@@ -434,10 +440,10 @@ else
   _fail "Room status not ready" "got '$RSTATUS'"
 fi
 
-if [ "$READY_COUNT" -eq 2 ]; then
-  _pass "devicesReady = 2"
+if [ "$READY_COUNT" -eq 4 ]; then
+  _pass "devicesReady = 4"
 else
-  _fail "devicesReady wrong" "expected 2, got $READY_COUNT"
+  _fail "devicesReady wrong" "expected 4, got $READY_COUNT"
 fi
 
 # 5.6: Command should now be completed with elapsedMs
@@ -625,6 +631,229 @@ fi
 
 # Reset TUG Fleet Monitor back to idle
 http_post "/device-update" "{\"deviceId\":\"$DEV_TUG_FLEET\",\"status\":\"idle\"}" >/dev/null
+
+###############################################################################
+# SECTION 10 — Verify new devices exist with correct category/fieldSchema
+###############################################################################
+
+_log_header "SECTION 10: New devices — Environmental Monitoring & Room Scheduling"
+
+# 10.1: Environmental Monitoring exists with correct category
+_log_test "Environmental Monitoring device has category 'monitoring'"
+RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
+ENV_CAT=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Environmental Monitoring") | .category')
+if [ "$ENV_CAT" = "monitoring" ]; then
+  _pass "Environmental Monitoring category = monitoring"
+else
+  _fail "Environmental Monitoring category wrong" "expected 'monitoring', got '$ENV_CAT'"
+fi
+
+# 10.2: Environmental Monitoring has fieldSchema with co2/particulate/temperature
+_log_test "Environmental Monitoring has fieldSchema with expected keys"
+ENV_FS=$(echo "$RESP" | jq '.devices[] | select(.name == "Environmental Monitoring") | .fieldSchema | keys')
+HAS_CO2=$(echo "$ENV_FS" | jq 'index("co2") != null')
+HAS_PART=$(echo "$ENV_FS" | jq 'index("particulate") != null')
+HAS_TEMP=$(echo "$ENV_FS" | jq 'index("temperature") != null')
+if [ "$HAS_CO2" = "true" ] && [ "$HAS_PART" = "true" ] && [ "$HAS_TEMP" = "true" ]; then
+  _pass "fieldSchema has co2, particulate, temperature"
+else
+  _fail "fieldSchema missing keys" "co2=$HAS_CO2 particulate=$HAS_PART temperature=$HAS_TEMP"
+fi
+
+# 10.3: Room Scheduling exists with correct category
+_log_test "Room Scheduling device has category 'scheduling'"
+SCHED_CAT=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Room Scheduling") | .category')
+if [ "$SCHED_CAT" = "scheduling" ]; then
+  _pass "Room Scheduling category = scheduling"
+else
+  _fail "Room Scheduling category wrong" "expected 'scheduling', got '$SCHED_CAT'"
+fi
+
+# 10.4: Room Scheduling has fieldSchema with selectedRoom/surgeon/delayMinutes
+_log_test "Room Scheduling has fieldSchema with expected keys"
+SCHED_FS=$(echo "$RESP" | jq '.devices[] | select(.name == "Room Scheduling") | .fieldSchema | keys')
+HAS_ROOM=$(echo "$SCHED_FS" | jq 'index("selectedRoom") != null')
+HAS_SURG=$(echo "$SCHED_FS" | jq 'index("surgeon") != null')
+HAS_DELAY=$(echo "$SCHED_FS" | jq 'index("delayMinutes") != null')
+if [ "$HAS_ROOM" = "true" ] && [ "$HAS_SURG" = "true" ] && [ "$HAS_DELAY" = "true" ]; then
+  _pass "fieldSchema has selectedRoom, surgeon, delayMinutes"
+else
+  _fail "fieldSchema missing keys" "selectedRoom=$HAS_ROOM surgeon=$HAS_SURG delayMinutes=$HAS_DELAY"
+fi
+
+# 10.5: Environmental Monitoring has co2 field value (numeric)
+_log_test "Environmental Monitoring has a numeric co2 field value"
+ENV_CO2=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Environmental Monitoring") | .fields.co2')
+if [ -n "$ENV_CO2" ] && [ "$ENV_CO2" != "null" ] && [ "$ENV_CO2" -gt 0 ] 2>/dev/null; then
+  _pass "Environmental Monitoring co2 = $ENV_CO2 (numeric > 0)"
+else
+  _fail "Environmental Monitoring co2 not valid" "got '$ENV_CO2'"
+fi
+
+###############################################################################
+# SECTION 11 — POST /trigger-anomaly
+###############################################################################
+
+_log_header "SECTION 11: POST /trigger-anomaly"
+
+# Reset all devices to idle before anomaly tests
+echo "  Resetting all devices to idle..."
+for did in "${ALL_DEVICE_IDS[@]}"; do
+  http_post "/device-update" "{\"deviceId\":\"$did\",\"status\":\"idle\"}" >/dev/null
+done
+settle
+
+# 11.1: ventilation_failure scenario
+_log_test "trigger-anomaly ventilation_failure — CO2=1200, device=error, room=needs_attention"
+RESP=$(http_post "/trigger-anomaly" "{\"roomId\":\"$ROOM_ID\",\"scenario\":\"ventilation_failure\"}")
+OK=$(echo "$RESP" | jq -r '.ok')
+SCENARIO=$(echo "$RESP" | jq -r '.scenario')
+if [ "$OK" = "true" ] && [ "$SCENARIO" = "ventilation_failure" ]; then
+  _pass "trigger-anomaly response ok=true, scenario=ventilation_failure"
+else
+  _fail "trigger-anomaly response wrong" "$RESP"
+fi
+
+settle
+
+RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
+ENV_CO2=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Environmental Monitoring") | .fields.co2')
+ENV_STATUS=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Environmental Monitoring") | .status')
+ROOM_STATUS=$(echo "$RESP" | jq -r '.room.status')
+
+if [ "$ENV_CO2" = "1200" ]; then
+  _pass "Environmental Monitoring co2 = 1200"
+else
+  _fail "Environmental Monitoring co2 wrong" "expected 1200, got '$ENV_CO2'"
+fi
+
+if [ "$ENV_STATUS" = "error" ]; then
+  _pass "Environmental Monitoring status = error"
+else
+  _fail "Environmental Monitoring status wrong" "expected 'error', got '$ENV_STATUS'"
+fi
+
+if [ "$ROOM_STATUS" = "needs_attention" ]; then
+  _pass "Room status = needs_attention"
+else
+  _fail "Room status wrong" "expected 'needs_attention', got '$ROOM_STATUS'"
+fi
+
+# Check environmentReadings record was inserted
+ENV_READINGS_COUNT=$(echo "$RESP" | jq '.environmentReadings | length')
+if [ "$ENV_READINGS_COUNT" -ge 1 ]; then
+  _pass "environmentReadings has $ENV_READINGS_COUNT record(s)"
+else
+  _fail "No environmentReadings record inserted" "count=$ENV_READINGS_COUNT"
+fi
+
+# Reset before next anomaly
+for did in "${ALL_DEVICE_IDS[@]}"; do
+  http_post "/device-update" "{\"deviceId\":\"$did\",\"status\":\"idle\"}" >/dev/null
+done
+settle
+
+# 11.2: battery_failure scenario
+_log_test "trigger-anomaly battery_failure — UV battery=15, status=error"
+RESP=$(http_post "/trigger-anomaly" "{\"roomId\":\"$ROOM_ID\",\"scenario\":\"battery_failure\"}")
+OK=$(echo "$RESP" | jq -r '.ok')
+settle
+
+RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
+UV_BATTERY=$(echo "$RESP" | jq -r '.devices[] | select(.name == "UV Robot") | .fields.battery')
+UV_STATUS=$(echo "$RESP" | jq -r '.devices[] | select(.name == "UV Robot") | .status')
+
+if [ "$UV_BATTERY" = "15" ]; then
+  _pass "UV Robot battery = 15"
+else
+  _fail "UV Robot battery wrong" "expected 15, got '$UV_BATTERY'"
+fi
+
+if [ "$UV_STATUS" = "error" ]; then
+  _pass "UV Robot status = error"
+else
+  _fail "UV Robot status wrong" "expected 'error', got '$UV_STATUS'"
+fi
+
+# Reset before next anomaly
+for did in "${ALL_DEVICE_IDS[@]}"; do
+  http_post "/device-update" "{\"deviceId\":\"$did\",\"status\":\"idle\"}" >/dev/null
+done
+settle
+
+# 11.3: co2_spike scenario
+_log_test "trigger-anomaly co2_spike — CO2=1050"
+RESP=$(http_post "/trigger-anomaly" "{\"roomId\":\"$ROOM_ID\",\"scenario\":\"co2_spike\"}")
+OK=$(echo "$RESP" | jq -r '.ok')
+settle
+
+RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
+ENV_CO2=$(echo "$RESP" | jq -r '.devices[] | select(.name == "Environmental Monitoring") | .fields.co2')
+
+if [ "$ENV_CO2" = "1050" ]; then
+  _pass "Environmental Monitoring co2 = 1050"
+else
+  _fail "Environmental Monitoring co2 wrong" "expected 1050, got '$ENV_CO2'"
+fi
+
+# Reset before validation tests
+for did in "${ALL_DEVICE_IDS[@]}"; do
+  http_post "/device-update" "{\"deviceId\":\"$did\",\"status\":\"idle\"}" >/dev/null
+done
+settle
+
+# 11.4: invalid scenario -> error
+_log_test "trigger-anomaly with invalid scenario returns error"
+RESP=$(http_post "/trigger-anomaly" "{\"roomId\":\"$ROOM_ID\",\"scenario\":\"invalid_thing\"}")
+ERR=$(echo "$RESP" | jq -r '.error // empty')
+if [ -n "$ERR" ]; then
+  _pass "Error returned for invalid scenario: $ERR"
+else
+  _fail "Expected error for invalid scenario" "$RESP"
+fi
+
+# 11.5: missing fields -> error
+_log_test "trigger-anomaly with missing fields returns error"
+RESP=$(http_post "/trigger-anomaly" "{\"roomId\":\"$ROOM_ID\"}")
+ERR=$(echo "$RESP" | jq -r '.error // empty')
+if [ -n "$ERR" ]; then
+  _pass "Error returned for missing scenario: $ERR"
+else
+  _fail "Expected error for missing scenario" "$RESP"
+fi
+
+###############################################################################
+# SECTION 12 — Verify reset after anomaly (all 4 devices back to idle)
+###############################################################################
+
+_log_header "SECTION 12: Reset after anomaly"
+
+# First trigger an anomaly
+http_post "/trigger-anomaly" "{\"roomId\":\"$ROOM_ID\",\"scenario\":\"ventilation_failure\"}" >/dev/null
+settle
+
+# Now reset all devices to idle
+_log_test "Reset all 4 devices to idle after anomaly"
+for did in "${ALL_DEVICE_IDS[@]}"; do
+  http_post "/device-update" "{\"deviceId\":\"$did\",\"status\":\"idle\"}" >/dev/null
+done
+settle
+
+RESP=$(http_get "${SITE_URL}/room-state?roomId=${ROOM_ID}")
+IDLE_COUNT=$(echo "$RESP" | jq '[.devices[] | select(.status == "idle")] | length')
+if [ "$IDLE_COUNT" -eq 4 ]; then
+  _pass "All 4 devices are idle after reset"
+else
+  _fail "Not all devices idle" "idle count = $IDLE_COUNT"
+fi
+
+# Verify room is no longer needs_attention (should go back to idle or ready)
+RSTATUS=$(echo "$RESP" | jq -r '.room.status')
+if [ "$RSTATUS" != "needs_attention" ]; then
+  _pass "Room status is no longer 'needs_attention' (is '$RSTATUS')"
+else
+  _fail "Room still needs_attention after full reset" "got '$RSTATUS'"
+fi
 
 ###############################################################################
 # Summary

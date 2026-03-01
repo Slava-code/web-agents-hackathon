@@ -42,11 +42,16 @@ export const updateDeviceStatus = internalMutation({
     const room = await ctx.db.get(device.roomId);
     if (!room) throw new Error("Room not found");
 
+    const hasConfiguring = roomDevices.some((d) => d.status === "configuring");
+    const allIdle = roomDevices.every((d) => d.status === "idle");
+
     let roomStatus = room.status;
     if (hasError) {
       roomStatus = "needs_attention";
     } else if (readyCount === totalDevices && totalDevices > 0) {
       roomStatus = "ready";
+    } else if (allIdle && room.status === "needs_attention") {
+      roomStatus = "idle";
     }
 
     await ctx.db.patch(device.roomId, {
@@ -96,5 +101,108 @@ export const updateDeviceFields = internalMutation({
     });
 
     return { ok: true };
+  },
+});
+
+export const triggerAnomaly = internalMutation({
+  args: {
+    roomId: v.id("rooms"),
+    scenario: v.union(
+      v.literal("ventilation_failure"),
+      v.literal("battery_failure"),
+      v.literal("co2_spike"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Get all devices in the room
+    const devices = await ctx.db
+      .query("devices")
+      .withIndex("by_room", (q) => q.eq("roomId", args.roomId))
+      .collect();
+
+    const findDevice = (name: string) =>
+      devices.find((d) => d.name === name);
+
+    if (args.scenario === "ventilation_failure") {
+      const envDevice = findDevice("Environmental Monitoring");
+      if (!envDevice) throw new Error("Environmental Monitoring device not found in room");
+
+      // Spike environmental readings
+      const spikedFields = {
+        ...(envDevice.fields as Record<string, unknown>),
+        co2: 1200,
+        particulate: 150,
+        temperature: ((envDevice.fields as Record<string, unknown>).temperature as number || 71.2) + 3,
+        allWithinRange: false,
+        riskLevel: "critical",
+        status: "VENTILATION FAILURE DETECTED",
+      };
+
+      await ctx.db.patch(envDevice._id, {
+        status: "error",
+        currentAction: "VENTILATION FAILURE DETECTED",
+        fields: spikedFields,
+        updatedAt: now,
+      });
+
+      // Insert an environmentReadings record
+      await ctx.db.insert("environmentReadings", {
+        roomId: args.roomId,
+        co2: 1200,
+        particulateCount: 150,
+        temperature: spikedFields.temperature as number,
+        humidity: (envDevice.fields as Record<string, unknown>).humidity as number || 52,
+        pressureDifferential: 0.01,
+        allWithinRange: false,
+        outOfRangeFields: ["co2", "particulate", "temperature"],
+        timestamp: now,
+      });
+    } else if (args.scenario === "battery_failure") {
+      const uvDevice = findDevice("UV Robot");
+      if (!uvDevice) throw new Error("UV Robot device not found in room");
+
+      const spikedFields = {
+        ...(uvDevice.fields as Record<string, unknown>),
+        battery: 15,
+        status: "BATTERY CRITICAL",
+        health: "Critical",
+        cycleMode: "Aborted",
+      };
+
+      await ctx.db.patch(uvDevice._id, {
+        status: "error",
+        currentAction: "BATTERY CRITICAL - Cycle aborted",
+        fields: spikedFields,
+        updatedAt: now,
+      });
+    } else if (args.scenario === "co2_spike") {
+      const envDevice = findDevice("Environmental Monitoring");
+      if (!envDevice) throw new Error("Environmental Monitoring device not found in room");
+
+      const spikedFields = {
+        ...(envDevice.fields as Record<string, unknown>),
+        co2: 1050,
+        allWithinRange: false,
+        riskLevel: "high",
+        status: "CO2 ELEVATED",
+      };
+
+      await ctx.db.patch(envDevice._id, {
+        status: "error",
+        currentAction: "CO2 SPIKE DETECTED",
+        fields: spikedFields,
+        updatedAt: now,
+      });
+    }
+
+    // Set room to needs_attention
+    await ctx.db.patch(args.roomId, {
+      status: "needs_attention",
+      updatedAt: now,
+    });
+
+    return { ok: true, scenario: args.scenario, triggeredAt: now };
   },
 });

@@ -44,7 +44,7 @@ export const init = internalMutation({
     const or3 = await ctx.db.insert("rooms", {
       name: "OR-3",
       status: "idle",
-      deviceCount: 2,
+      deviceCount: 4,
       devicesReady: 0,
       updatedAt: now,
     });
@@ -120,6 +120,56 @@ export const init = internalMutation({
           units: { type: "object", label: "Fleet Units", readOnly: true },
         },
       },
+      {
+        name: "Environmental Monitoring",
+        category: "monitoring",
+        url: "http://localhost:3000/environmental",
+        fields: {
+          co2: 750,
+          particulate: 95,
+          temperature: 71.2,
+          humidity: 52,
+          pressureDifferential: 0.05,
+          allWithinRange: false,
+          riskLevel: "high",
+          status: "warning",
+        },
+        fieldSchema: {
+          co2: { type: "number", label: "CO2 Level", readOnly: true, unit: "ppm" },
+          particulate: { type: "number", label: "Particulate (PM2.5)", readOnly: true, unit: "μg/m³" },
+          temperature: { type: "number", label: "Temperature", readOnly: true, unit: "°F" },
+          humidity: { type: "number", label: "Humidity", readOnly: true, unit: "%" },
+          pressureDifferential: { type: "number", label: "Pressure Differential", readOnly: true, unit: "inH₂O" },
+          allWithinRange: { type: "boolean", label: "All Within Range", readOnly: true },
+          riskLevel: { type: "string", label: "Risk Level", readOnly: true },
+          status: { type: "string", label: "Status", readOnly: true },
+        },
+      },
+      {
+        name: "Room Scheduling",
+        category: "scheduling",
+        url: "http://localhost:3000/ehr",
+        fields: {
+          selectedRoom: "OR-3",
+          roomStatus: "Ready",
+          nextProcedure: "Rotator Cuff Repair",
+          nextPatient: "Brown, Elizabeth K.",
+          scheduledTime: "14:45",
+          surgeon: "Dr. Mark Thompson",
+          delayMinutes: 0,
+          status: "on_schedule",
+        },
+        fieldSchema: {
+          selectedRoom: { type: "string", label: "Selected Room", control: "dropdown" },
+          roomStatus: { type: "string", label: "Room Status", readOnly: true },
+          nextProcedure: { type: "string", label: "Next Procedure", readOnly: true },
+          nextPatient: { type: "string", label: "Next Patient", readOnly: true },
+          scheduledTime: { type: "string", label: "Scheduled Time", readOnly: true },
+          surgeon: { type: "string", label: "Surgeon", readOnly: true },
+          delayMinutes: { type: "number", label: "Delay (min)", control: "input", unit: "min" },
+          status: { type: "string", label: "Status", readOnly: true },
+        },
+      },
     ];
 
     for (const device of devices) {
@@ -137,7 +187,7 @@ export const init = internalMutation({
 
     console.log("Seed data inserted:", {
       rooms: { "OR-1": or1, "OR-2": or2, "OR-3": or3, "OR-4": or4 },
-      devices: "2 devices for OR-3",
+      devices: "4 devices for OR-3",
     });
   },
 });

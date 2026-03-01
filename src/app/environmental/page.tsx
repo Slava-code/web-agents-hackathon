@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS } from '@/lib/convex-api'
+import { updateDeviceStatus, updateDeviceFields, DEVICE_IDS, ROOM_IDS } from '@/lib/convex-api'
+import { useConvexDeviceOverlay } from '@/hooks/useConvexDeviceOverlay'
+import ConvexStatusBadge from '@/components/ConvexStatusBadge'
 
 interface Sensor {
   id: string
@@ -60,6 +62,48 @@ export default function EnvironmentalMonitoring() {
   })
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
 
+  // Convex real-time overlay
+  const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "Environmental Monitoring")
+
+  // Sync Convex fields → local sensor state for ENV-003 (OR-3 Main)
+  useEffect(() => {
+    if (convexState.isLoading || convexState.status === 'idle') return
+    const f = convexState.fields
+    if (!f.co2 && !f.particulate && !f.temperature) return
+
+    setSensors(prev => prev.map(sensor => {
+      if (sensor.id !== 'ENV-003') return sensor
+      return {
+        ...sensor,
+        co2: typeof f.co2 === 'number' ? f.co2 : sensor.co2,
+        particulate: typeof f.particulate === 'number' ? f.particulate : sensor.particulate,
+        temperature: typeof f.temperature === 'number' ? f.temperature : sensor.temperature,
+        humidity: typeof f.humidity === 'number' ? f.humidity : sensor.humidity,
+        riskLevel: (f.riskLevel === 'critical' || f.riskLevel === 'high') ? 'high' : f.riskLevel === 'medium' ? 'medium' : sensor.riskLevel,
+        status: convexState.status === 'error' ? 'warning' : sensor.status,
+      }
+    }))
+
+    // Inject a critical alert when Convex reports anomaly
+    if (convexState.status === 'error' && convexState.currentAction) {
+      setAlerts(prev => {
+        const exists = prev.some(a => a.message === convexState.currentAction)
+        if (exists) return prev
+        return [
+          {
+            id: Date.now(),
+            type: 'critical' as const,
+            message: convexState.currentAction!,
+            sensor: 'ENV-003',
+            time: 'just now',
+            acknowledged: false,
+          },
+          ...prev,
+        ]
+      })
+    }
+  }, [convexState.status, convexState.fields, convexState.isLoading, convexState.currentAction])
+
   // Stats
   const totalSensors = sensors.length
   const onlineSensors = sensors.filter(s => s.status === 'online').length
@@ -87,12 +131,14 @@ export default function EnvironmentalMonitoring() {
     return () => clearInterval(interval)
   }, [])
 
-  // Simulate sensor updates
+  // Simulate sensor updates (skip ENV-003 when Convex is actively controlling it)
   useEffect(() => {
     if (!autoRefresh) return
     const interval = setInterval(() => {
       setSensors(prev => prev.map(sensor => {
         if (sensor.status === 'offline') return sensor
+        // Guard: don't jitter ENV-003 when Convex has an active anomaly state
+        if (sensor.id === 'ENV-003' && convexState.status !== 'idle') return sensor
         return {
           ...sensor,
           particulate: Math.max(0, Math.min(150, sensor.particulate + Math.floor((Math.random() - 0.5) * 10))),
@@ -103,7 +149,7 @@ export default function EnvironmentalMonitoring() {
       }))
     }, 5000)
     return () => clearInterval(interval)
-  }, [autoRefresh])
+  }, [autoRefresh, convexState.status])
 
   const acknowledgeAlert = (id: number) => {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, acknowledged: true } : a))
@@ -149,6 +195,7 @@ export default function EnvironmentalMonitoring() {
 
   return (
     <div className="min-h-screen bg-[#f5f6fa]" style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+      <ConvexStatusBadge state={convexState} />
       {/* Top Navigation Bar */}
       <header className="bg-[#1a1f36] text-white">
         <div className="flex items-center justify-between px-6 py-3">
