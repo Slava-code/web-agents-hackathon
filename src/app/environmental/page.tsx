@@ -65,6 +65,13 @@ export default function EnvironmentalMonitoring() {
   // Convex real-time overlay
   const convexState = useConvexDeviceOverlay(ROOM_IDS.OR_3, "Environmental Monitoring")
 
+  // Extract out-of-range field names from Convex state for ENV-003 highlighting
+  const outOfRangeFieldNames = new Set<string>(
+    Array.isArray(convexState.fields.outOfRangeFields)
+      ? (convexState.fields.outOfRangeFields as Array<{ field: string }>).map(f => f.field)
+      : []
+  )
+
   // Sync Convex fields → local sensor state for ENV-003 (OR-3 Main)
   useEffect(() => {
     if (convexState.isLoading || convexState.status === 'idle') return
@@ -183,6 +190,11 @@ export default function EnvironmentalMonitoring() {
       case 'offline': return 'bg-red-500'
       default: return 'bg-gray-400'
     }
+  }
+
+  // Check if a field on ENV-003 is currently out of range (from Convex anomaly data)
+  const isFieldOutOfRange = (sensorId: string, fieldName: string) => {
+    return sensorId === 'ENV-003' && outOfRangeFieldNames.has(fieldName)
   }
 
   const getRiskColor = (risk: string) => {
@@ -512,8 +524,10 @@ export default function EnvironmentalMonitoring() {
                         key={sensor.id}
                         onClick={() => setSelectedSensor(selectedSensor === sensor.id ? null : sensor.id)}
                         data-testid={`sensor-row-${sensor.id}`}
-                        className={`hover:bg-gray-50 cursor-pointer transition-colors ${
-                          selectedSensor === sensor.id ? 'bg-cyan-50' : ''
+                        className={`hover:bg-gray-50 cursor-pointer transition-colors duration-500 ${
+                          sensor.id === 'ENV-003' && outOfRangeFieldNames.size > 0
+                            ? 'bg-red-50 border-l-4 border-l-red-500'
+                            : selectedSensor === sensor.id ? 'bg-cyan-50' : ''
                         }`}
                       >
                         <td className="px-4 py-3">
@@ -522,22 +536,40 @@ export default function EnvironmentalMonitoring() {
                         <td className="px-4 py-3 font-mono text-gray-900">{sensor.id}</td>
                         <td className="px-4 py-3 text-gray-600">{sensor.location}</td>
                         <td className="px-4 py-3 text-gray-600">{sensor.type}</td>
-                        <td className={`px-4 py-3 text-right font-mono ${
-                          sensor.particulate > 80 ? 'text-red-600 font-medium' :
-                          sensor.particulate > 50 ? 'text-amber-600' : 'text-gray-900'
+                        <td className={`px-4 py-3 text-right font-mono transition-colors duration-500 ${
+                          isFieldOutOfRange(sensor.id, 'particulate')
+                            ? 'text-red-700 font-bold bg-red-100 animate-pulse'
+                            : sensor.particulate > 80 ? 'text-red-600 font-medium'
+                            : sensor.particulate > 50 ? 'text-amber-600' : 'text-gray-900'
                         }`}>
-                          {sensor.status === 'offline' ? '—' : sensor.particulate}
+                          {sensor.status === 'offline' ? '—' : (
+                            isFieldOutOfRange(sensor.id, 'particulate')
+                              ? <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />{sensor.particulate}</span>
+                              : sensor.particulate
+                          )}
                         </td>
-                        <td className={`px-4 py-3 text-right font-mono ${
-                          sensor.temperature > 72 ? 'text-red-600 font-medium' : 'text-gray-900'
+                        <td className={`px-4 py-3 text-right font-mono transition-colors duration-500 ${
+                          isFieldOutOfRange(sensor.id, 'temperature')
+                            ? 'text-red-700 font-bold bg-red-100 animate-pulse'
+                            : sensor.temperature > 72 ? 'text-red-600 font-medium' : 'text-gray-900'
                         }`}>
-                          {sensor.status === 'offline' ? '—' : `${sensor.temperature}°F`}
+                          {sensor.status === 'offline' ? '—' : (
+                            isFieldOutOfRange(sensor.id, 'temperature')
+                              ? <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />{sensor.temperature}°F</span>
+                              : `${sensor.temperature}°F`
+                          )}
                         </td>
-                        <td className={`px-4 py-3 text-right font-mono ${
-                          sensor.co2 > 700 ? 'text-red-600 font-medium' :
-                          sensor.co2 > 600 ? 'text-amber-600' : 'text-gray-900'
+                        <td className={`px-4 py-3 text-right font-mono transition-colors duration-500 ${
+                          isFieldOutOfRange(sensor.id, 'co2')
+                            ? 'text-red-700 font-bold bg-red-100 animate-pulse'
+                            : sensor.co2 > 700 ? 'text-red-600 font-medium'
+                            : sensor.co2 > 600 ? 'text-amber-600' : 'text-gray-900'
                         }`}>
-                          {sensor.status === 'offline' ? '—' : sensor.co2}
+                          {sensor.status === 'offline' ? '—' : (
+                            isFieldOutOfRange(sensor.id, 'co2')
+                              ? <span className="inline-flex items-center gap-1"><span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />{sensor.co2}</span>
+                              : sensor.co2
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${getRiskColor(sensor.riskLevel)}`}>
