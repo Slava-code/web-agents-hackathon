@@ -261,7 +261,11 @@ export default function TUGDashboard() {
               <div
                 key={bot.id}
                 data-testid={`bot-row-${bot.id}`}
-                className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 last:border-0 items-center hover:bg-slate-50 transition-colors"
+                className={`grid grid-cols-12 gap-4 px-6 py-4 border-b border-slate-100 last:border-0 items-center transition-colors ${
+                  bot.id === 'TUG-01' && bot.status === 'EN_ROUTE' ? 'bg-amber-50 border-l-4 border-l-amber-400' :
+                  bot.id === 'TUG-01' && bot.status === 'ARRIVED' ? 'bg-emerald-50 border-l-4 border-l-emerald-500' :
+                  'hover:bg-slate-50'
+                }`}
               >
                 {/* Unit */}
                 <div className="col-span-1">
