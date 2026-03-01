@@ -60,7 +60,7 @@ export default function AgentPage() {
 
   // Learn state
   const [learnBaseUrl, setLearnBaseUrl] = useState('')
-  const [learnRoutes, setLearnRoutes] = useState('/uv-robot\n/environmental\n/sterilizer\n/ehr')
+  const [learnRoutes, setLearnRoutes] = useState('/uv-robot\n/environmental\n/tug-robot\n/ehr')
 
   // Scrape + Monitor state (shared site/route selectors)
   const [savedSites, setSavedSites] = useState<SavedSite[]>([])

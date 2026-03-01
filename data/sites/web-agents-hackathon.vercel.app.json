@@ -3,7 +3,7 @@
   "hostname": "web-agents-hackathon.vercel.app",
   "containerId": "test-hospital-1",
   "baseUrl": "https://web-agents-hackathon.vercel.app",
-  "learnedAt": "2026-03-01T08:20:52.191Z",
+  "learnedAt": "2026-03-01T12:00:49.320Z",
   "totalCost": "0.051851",
   "routes": [
     {
@@ -255,6 +255,384 @@
       "cost": "0.051851",
       "quickCheckScript": "(function(){\nvar vals = [];\n  vals.push((function(){\n  try {\n    var el = document.querySelector('header h1.text-xl.font-bold');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('header span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Unit:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('header span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('User:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('input[type=\\'checkbox\\']:nth-of-type(1)');\n    return el ? String(el.checked) : 'false';\n  } catch(e) { return 'false'; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('input[type=\\'checkbox\\']:nth-of-type(2)');\n    return el ? String(el.checked) : 'false';\n  } catch(e) { return 'false'; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('input[type=\\'checkbox\\']:nth-of-type(3)');\n    return el ? String(el.checked) : 'false';\n  } catch(e) { return 'false'; }\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-1') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-2') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-3') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-4') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('PACU') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('h2.text-2xl.font-bold');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('.bg-yellow-500');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('.font-mono');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Room Cleaned') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Equipment Staged') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Instruments Verified') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Anesthesia Setup') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Patient Ready') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('h3.text-lg.font-bold');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('MRN:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('DOB:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('.text-blue-600');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('.bg-red-50 p');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Procedure') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Surgeon') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Duration') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Anesthesia') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Notes') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(1) .font-bold.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(1) .font-medium.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(1) .uppercase');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(2) .font-bold.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(2) .font-medium.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(2) .uppercase');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(3) .font-bold.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(3) .font-medium.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(3) .uppercase');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('footer span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Last sync:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\n  vals.push((function(){\n  try {\n    var els = document.querySelectorAll('footer span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Session expires') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})());\nvar str = vals.join('|');\nvar hash = 5381;\nfor (var i = 0; i < str.length; i++) {\n  hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0xFFFFFFFF;\n}\nreturn (hash >>> 0).toString(16);\n})()",
       "fullExtractScript": "(function(){\nvar result = {};\n  result[\"hospitalName\"] = (function(){\n  try {\n    var el = document.querySelector('header h1.text-xl.font-bold');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"unitName\"] = (function(){\n  try {\n    var els = document.querySelectorAll('header span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Unit:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"userName\"] = (function(){\n  try {\n    var els = document.querySelectorAll('header span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('User:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"filterShowReadyRooms\"] = (function(){\n  try {\n    var el = document.querySelector('input[type=\\'checkbox\\']:nth-of-type(1)');\n    return el ? String(el.checked) : 'false';\n  } catch(e) { return 'false'; }\n})();\n  result[\"filterShowTurnover\"] = (function(){\n  try {\n    var el = document.querySelector('input[type=\\'checkbox\\']:nth-of-type(2)');\n    return el ? String(el.checked) : 'false';\n  } catch(e) { return 'false'; }\n})();\n  result[\"filterShowOccupied\"] = (function(){\n  try {\n    var el = document.querySelector('input[type=\\'checkbox\\']:nth-of-type(3)');\n    return el ? String(el.checked) : 'false';\n  } catch(e) { return 'false'; }\n})();\n  result[\"roomStatus_OR-1\"] = (function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-1') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"roomStatus_OR-2\"] = (function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-2') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"roomStatus_OR-3\"] = (function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-3') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"roomStatus_OR-4\"] = (function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('OR-4') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"roomStatus_PACU\"] = (function(){\n  try {\n    var els = document.querySelectorAll('button');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('PACU') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"activeRoomTitle\"] = (function(){\n  try {\n    var el = document.querySelector('h2.text-2xl.font-bold');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"activeRoomStatus\"] = (function(){\n  try {\n    var el = document.querySelector('.bg-yellow-500');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"turnoverTime\"] = (function(){\n  try {\n    var el = document.querySelector('.font-mono');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"checklist_RoomCleaned\"] = (function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Room Cleaned') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})();\n  result[\"checklist_EquipmentStaged\"] = (function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Equipment Staged') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})();\n  result[\"checklist_InstrumentsVerified\"] = (function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Instruments Verified') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})();\n  result[\"checklist_AnesthesiaSetup\"] = (function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Anesthesia Setup') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})();\n  result[\"checklist_PatientReady\"] = (function(){\n  try {\n    var els = document.querySelectorAll('label');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Patient Ready') !== -1) {\n        var child = els[i].querySelector('input');\n        if (child) return String(child.checked);\n      }\n    }\n  } catch(e) {}\n  return 'false';\n})();\n  result[\"patientName\"] = (function(){\n  try {\n    var el = document.querySelector('h3.text-lg.font-bold');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"mrn\"] = (function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('MRN:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"dob\"] = (function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('DOB:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"scheduledTime\"] = (function(){\n  try {\n    var el = document.querySelector('.text-blue-600');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"allergies\"] = (function(){\n  try {\n    var el = document.querySelector('.bg-red-50 p');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"procedure\"] = (function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Procedure') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"surgeon\"] = (function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Surgeon') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"duration\"] = (function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Duration') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"anesthesia\"] = (function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Anesthesia') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"notes\"] = (function(){\n  try {\n    var els = document.querySelectorAll('p');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Notes') !== -1) {\n        var sib = els[i].nextElementSibling;\n        if (sib && sib.matches('p')) return sib.textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"schedule_time_0\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(1) .font-bold.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_patient_0\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(1) .font-medium.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_status_0\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(1) .uppercase');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_time_1\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(2) .font-bold.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_patient_1\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(2) .font-medium.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_status_1\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(2) .uppercase');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_time_2\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(3) .font-bold.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_patient_2\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(3) .font-medium.text-gray-900');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"schedule_status_2\"] = (function(){\n  try {\n    var el = document.querySelector('div:nth-of-type(3) .uppercase');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"lastSync\"] = (function(){\n  try {\n    var els = document.querySelectorAll('footer span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Last sync:') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\n  result[\"sessionExpiry\"] = (function(){\n  try {\n    var els = document.querySelectorAll('footer span');\n    for (var i = 0; i < els.length; i++) {\n      if (els[i].textContent && els[i].textContent.indexOf('Session expires') !== -1) {\n        return els[i].textContent.trim();\n      }\n    }\n  } catch(e) {}\n  return '';\n})();\nreturn JSON.stringify(result);\n})()"
+    },
+    {
+      "path": "/uv-robot",
+      "pagePurpose": "UV-C Disinfection Robot Control Dashboard for managing sterilization cycles, intensity, and device status.",
+      "pageLayout": "Three-column layout: left has room selection, cycle mode, intensity slider, device status; center has progress display with controls; right has cycle history.",
+      "fields": [
+        {
+          "name": "deviceId",
+          "selector": "[data-testid=\\\"room-selector\\\"] ~ .font-mono.text-sm",
+          "sampleValue": "UVC-2019-4721",
+          "type": "string"
+        },
+        {
+          "name": "selectedRoom",
+          "selector": "[data-testid=room-selector]",
+          "sampleValue": "OR-1",
+          "type": "string"
+        },
+        {
+          "name": "cycleMode",
+          "selector": "[data-testid=mode-standard]",
+          "sampleValue": "standard",
+          "type": "string"
+        },
+        {
+          "name": "intensity",
+          "selector": "[data-testid=intensity-value]",
+          "sampleValue": "85",
+          "type": "string"
+        },
+        {
+          "name": "progress",
+          "selector": "[data-testid=progress-value]",
+          "sampleValue": "00",
+          "type": "string"
+        },
+        {
+          "name": "cycleStatus",
+          "selector": "[data-testid=cycle-status]",
+          "sampleValue": "standby",
+          "type": "string"
+        },
+        {
+          "name": "displayRoom",
+          "selector": "[data-testid=display-room]",
+          "sampleValue": "OR-1",
+          "type": "string"
+        },
+        {
+          "name": "displayMode",
+          "selector": "[data-testid=display-mode]",
+          "sampleValue": "standard",
+          "type": "string"
+        },
+        {
+          "name": "displayIntensity",
+          "selector": "[data-testid=display-intensity]",
+          "sampleValue": "85%",
+          "type": "string"
+        },
+        {
+          "name": "batteryLevel",
+          "selector": "[data-testid=battery-level-text]",
+          "sampleValue": "87%",
+          "type": "string"
+        },
+        {
+          "name": "lampHours",
+          "selector": "[data-testid=lamp-hours]",
+          "sampleValue": "1247",
+          "type": "string"
+        },
+        {
+          "name": "connectionStatus",
+          "selector": "[data-testid=status-bar-connection]",
+          "sampleValue": "System Online",
+          "type": "string"
+        },
+        {
+          "name": "historyRow0_room",
+          "selector": "[data-testid=history-row-0] .font-mono.text-sm",
+          "sampleValue": "OR-3",
+          "type": "string"
+        },
+        {
+          "name": "historyRow0_time",
+          "selector": "[data-testid=history-row-0] .text-right .font-mono.text-sm",
+          "sampleValue": "14:22",
+          "type": "string"
+        },
+        {
+          "name": "historyRow1_room",
+          "selector": "[data-testid=history-row-1] .font-mono.text-sm",
+          "sampleValue": "OR-1",
+          "type": "string"
+        },
+        {
+          "name": "historyRow1_time",
+          "selector": "[data-testid=history-row-1] .text-right .font-mono.text-sm",
+          "sampleValue": "13:45",
+          "type": "string"
+        }
+      ],
+      "cost": "0",
+      "quickCheckScript": "(function(){\nvar vals = [];\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=\\\"room-selector\\\"] ~ .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=room-selector]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=mode-standard]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=intensity-value]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=progress-value]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=cycle-status]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=display-room]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=display-mode]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=display-intensity]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=battery-level-text]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=lamp-hours]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=status-bar-connection]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-0] .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-0] .text-right .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-1] .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-1] .text-right .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\nvar str = vals.join('|');\nvar hash = 5381;\nfor (var i = 0; i < str.length; i++) {\n  hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0xFFFFFFFF;\n}\nreturn (hash >>> 0).toString(16);\n})()",
+      "fullExtractScript": "(function(){\nvar result = {};\n  result[\"deviceId\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=\\\"room-selector\\\"] ~ .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"selectedRoom\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=room-selector]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"cycleMode\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=mode-standard]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"intensity\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=intensity-value]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"progress\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=progress-value]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"cycleStatus\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=cycle-status]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"displayRoom\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=display-room]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"displayMode\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=display-mode]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"displayIntensity\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=display-intensity]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"batteryLevel\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=battery-level-text]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"lampHours\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=lamp-hours]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"connectionStatus\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=status-bar-connection]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"historyRow0_room\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-0] .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"historyRow0_time\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-0] .text-right .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"historyRow1_room\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-1] .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"historyRow1_time\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=history-row-1] .text-right .font-mono.text-sm');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\nreturn JSON.stringify(result);\n})()"
+    },
+    {
+      "path": "/environmental",
+      "pagePurpose": "Environmental IoT Sensor Monitoring Dashboard for tracking air quality, temperature, humidity, CO2 levels across hospital zones.",
+      "pageLayout": "Top nav with tabs, filters bar, 6-column stats summary, left column with categories/utilization/risk, right column with sensor table and alerts.",
+      "fields": [
+        {
+          "name": "totalSensors",
+          "selector": "[data-testid=stat-total-sensors] .text-3xl",
+          "sampleValue": "8",
+          "type": "string"
+        },
+        {
+          "name": "onlineSensors",
+          "selector": "[data-testid=stat-online] .text-3xl",
+          "sampleValue": "6",
+          "type": "string"
+        },
+        {
+          "name": "warningSensors",
+          "selector": "[data-testid=stat-warning] .text-3xl",
+          "sampleValue": "1",
+          "type": "string"
+        },
+        {
+          "name": "offlineSensors",
+          "selector": "[data-testid=stat-offline] .text-3xl",
+          "sampleValue": "1",
+          "type": "string"
+        },
+        {
+          "name": "highRiskSensors",
+          "selector": "[data-testid=stat-high-risk] .text-3xl",
+          "sampleValue": "1",
+          "type": "string"
+        },
+        {
+          "name": "activeAlerts",
+          "selector": "[data-testid=stat-active-alerts] .text-3xl",
+          "sampleValue": "2",
+          "type": "string"
+        },
+        {
+          "name": "siteFilter",
+          "selector": "[data-testid=site-filter]",
+          "sampleValue": "all",
+          "type": "string"
+        },
+        {
+          "name": "timeRangeFilter",
+          "selector": "[data-testid=time-range-filter]",
+          "sampleValue": "24h",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV001_pm25",
+          "selector": "[data-testid=sensor-row-ENV-001] td:nth-child(5)",
+          "sampleValue": "42",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV001_temp",
+          "selector": "[data-testid=sensor-row-ENV-001] td:nth-child(6)",
+          "sampleValue": "68.5°F",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV001_co2",
+          "selector": "[data-testid=sensor-row-ENV-001] td:nth-child(7)",
+          "sampleValue": "620",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV002_pm25",
+          "selector": "[data-testid=sensor-row-ENV-002] td:nth-child(5)",
+          "sampleValue": "55",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV002_temp",
+          "selector": "[data-testid=sensor-row-ENV-002] td:nth-child(6)",
+          "sampleValue": "69.1°F",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV002_co2",
+          "selector": "[data-testid=sensor-row-ENV-002] td:nth-child(7)",
+          "sampleValue": "580",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV003_pm25",
+          "selector": "[data-testid=sensor-row-ENV-003] td:nth-child(5)",
+          "sampleValue": "95",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV003_temp",
+          "selector": "[data-testid=sensor-row-ENV-003] td:nth-child(6)",
+          "sampleValue": "71.2°F",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV003_co2",
+          "selector": "[data-testid=sensor-row-ENV-003] td:nth-child(7)",
+          "sampleValue": "750",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV004_pm25",
+          "selector": "[data-testid=sensor-row-ENV-004] td:nth-child(5)",
+          "sampleValue": "35",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV004_temp",
+          "selector": "[data-testid=sensor-row-ENV-004] td:nth-child(6)",
+          "sampleValue": "70.0°F",
+          "type": "string"
+        },
+        {
+          "name": "sensor_ENV004_co2",
+          "selector": "[data-testid=sensor-row-ENV-004] td:nth-child(7)",
+          "sampleValue": "540",
+          "type": "string"
+        },
+        {
+          "name": "threshold_particulate",
+          "selector": "[data-testid=threshold-particulate]",
+          "sampleValue": "100",
+          "type": "string"
+        },
+        {
+          "name": "threshold_co2",
+          "selector": "[data-testid=threshold-co2]",
+          "sampleValue": "700",
+          "type": "string"
+        },
+        {
+          "name": "threshold_tempMin",
+          "selector": "[data-testid=threshold-temp-min]",
+          "sampleValue": "65",
+          "type": "string"
+        },
+        {
+          "name": "threshold_tempMax",
+          "selector": "[data-testid=threshold-temp-max]",
+          "sampleValue": "72",
+          "type": "string"
+        }
+      ],
+      "cost": "0",
+      "quickCheckScript": "(function(){\nvar vals = [];\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-total-sensors] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-online] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-warning] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-offline] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-high-risk] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-active-alerts] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=site-filter]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=time-range-filter]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-001] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-001] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-001] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-002] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-002] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-002] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-003] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-003] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-003] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-004] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-004] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-004] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-particulate]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-co2]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-temp-min]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-temp-max]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\nvar str = vals.join('|');\nvar hash = 5381;\nfor (var i = 0; i < str.length; i++) {\n  hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0xFFFFFFFF;\n}\nreturn (hash >>> 0).toString(16);\n})()",
+      "fullExtractScript": "(function(){\nvar result = {};\n  result[\"totalSensors\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-total-sensors] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"onlineSensors\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-online] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"warningSensors\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-warning] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"offlineSensors\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-offline] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"highRiskSensors\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-high-risk] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"activeAlerts\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=stat-active-alerts] .text-3xl');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"siteFilter\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=site-filter]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"timeRangeFilter\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=time-range-filter]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV001_pm25\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-001] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV001_temp\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-001] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV001_co2\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-001] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV002_pm25\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-002] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV002_temp\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-002] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV002_co2\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-002] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV003_pm25\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-003] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV003_temp\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-003] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV003_co2\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-003] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV004_pm25\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-004] td:nth-child(5)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV004_temp\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-004] td:nth-child(6)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"sensor_ENV004_co2\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=sensor-row-ENV-004] td:nth-child(7)');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"threshold_particulate\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-particulate]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"threshold_co2\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-co2]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"threshold_tempMin\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-temp-min]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"threshold_tempMax\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=threshold-temp-max]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\nreturn JSON.stringify(result);\n})()"
+    },
+    {
+      "path": "/tug-robot",
+      "pagePurpose": "TUG Fleet Monitor Dashboard for tracking autonomous transport robots moving supplies from ORs to Sterilization.",
+      "pageLayout": "Header with fleet stats, status bar with bot counts, main table showing each bot with status/progress/battery, quick stats footer.",
+      "fields": [
+        {
+          "name": "activeCount",
+          "selector": "[data-testid=active-count]",
+          "sampleValue": "2 / 4",
+          "type": "string"
+        },
+        {
+          "name": "tripCount",
+          "selector": "[data-testid=trip-count]",
+          "sampleValue": "47",
+          "type": "string"
+        },
+        {
+          "name": "bot1_id",
+          "selector": "[data-testid=bot-id-TUG-01]",
+          "sampleValue": "TUG-01",
+          "type": "string"
+        },
+        {
+          "name": "bot1_status",
+          "selector": "[data-testid=bot-status-TUG-01]",
+          "sampleValue": "IDLE",
+          "type": "string"
+        },
+        {
+          "name": "bot1_source",
+          "selector": "[data-testid=bot-source-TUG-01]",
+          "sampleValue": "OR-1",
+          "type": "string"
+        },
+        {
+          "name": "bot1_battery",
+          "selector": "[data-testid=bot-battery-TUG-01]",
+          "sampleValue": "94%",
+          "type": "string"
+        },
+        {
+          "name": "bot2_id",
+          "selector": "[data-testid=bot-id-TUG-02]",
+          "sampleValue": "TUG-02",
+          "type": "string"
+        },
+        {
+          "name": "bot2_status",
+          "selector": "[data-testid=bot-status-TUG-02]",
+          "sampleValue": "EN ROUTE",
+          "type": "string"
+        },
+        {
+          "name": "bot2_source",
+          "selector": "[data-testid=bot-source-TUG-02]",
+          "sampleValue": "OR-3",
+          "type": "string"
+        },
+        {
+          "name": "bot2_battery",
+          "selector": "[data-testid=bot-battery-TUG-02]",
+          "sampleValue": "78%",
+          "type": "string"
+        },
+        {
+          "name": "bot3_id",
+          "selector": "[data-testid=bot-id-TUG-03]",
+          "sampleValue": "TUG-03",
+          "type": "string"
+        },
+        {
+          "name": "bot3_status",
+          "selector": "[data-testid=bot-status-TUG-03]",
+          "sampleValue": "IDLE",
+          "type": "string"
+        },
+        {
+          "name": "bot3_source",
+          "selector": "[data-testid=bot-source-TUG-03]",
+          "sampleValue": "OR-2",
+          "type": "string"
+        },
+        {
+          "name": "bot3_battery",
+          "selector": "[data-testid=bot-battery-TUG-03]",
+          "sampleValue": "62%",
+          "type": "string"
+        },
+        {
+          "name": "bot4_id",
+          "selector": "[data-testid=bot-id-TUG-04]",
+          "sampleValue": "TUG-04",
+          "type": "string"
+        },
+        {
+          "name": "bot4_status",
+          "selector": "[data-testid=bot-status-TUG-04]",
+          "sampleValue": "RETURNING",
+          "type": "string"
+        },
+        {
+          "name": "bot4_source",
+          "selector": "[data-testid=bot-source-TUG-04]",
+          "sampleValue": "OR-4",
+          "type": "string"
+        },
+        {
+          "name": "bot4_battery",
+          "selector": "[data-testid=bot-battery-TUG-04]",
+          "sampleValue": "55%",
+          "type": "string"
+        }
+      ],
+      "cost": "0",
+      "quickCheckScript": "(function(){\nvar vals = [];\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=active-count]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=trip-count]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\n  vals.push((function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})());\nvar str = vals.join('|');\nvar hash = 5381;\nfor (var i = 0; i < str.length; i++) {\n  hash = ((hash << 5) + hash + str.charCodeAt(i)) & 0xFFFFFFFF;\n}\nreturn (hash >>> 0).toString(16);\n})()",
+      "fullExtractScript": "(function(){\nvar result = {};\n  result[\"activeCount\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=active-count]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"tripCount\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=trip-count]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot1_id\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot1_status\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot1_source\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot1_battery\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-01]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot2_id\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot2_status\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot2_source\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot2_battery\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-02]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot3_id\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot3_status\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot3_source\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot3_battery\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-03]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot4_id\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-id-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot4_status\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-status-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot4_source\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-source-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\n  result[\"bot4_battery\"] = (function(){\n  try {\n    var el = document.querySelector('[data-testid=bot-battery-TUG-04]');\n    return el ? el.textContent.trim() : '';\n  } catch(e) { return ''; }\n})();\nreturn JSON.stringify(result);\n})()"
     }
   ]
 }
