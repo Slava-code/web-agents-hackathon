@@ -42,6 +42,7 @@ type EventData =
   | { type: 'convex'; ok: boolean; deviceId: string; deviceName: string; fieldsSent: number; error?: string; message?: string }
 
 type Tab = 'learn' | 'scrape' | 'monitor' | 'watch' | 'custom'
+const VISIBLE_TABS: Tab[] = ['learn', 'watch']
 
 // ─── Component ───────────────────────────────────────────────────────
 
@@ -568,31 +569,12 @@ export default function AgentPage() {
         )}
       </div>
 
-      <div className="flex h-[calc(100vh-65px)]">
-        {/* Left: Live Browser Viewer */}
-        <div className="flex-1 flex flex-col">
-          {liveUrl ? (
-            <iframe
-              src={liveUrl}
-              className="flex-1 w-full bg-black"
-              allow="clipboard-read; clipboard-write"
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-slate-950">
-              <div className="text-center text-slate-500">
-                <div className="text-6xl mb-4">&#127760;</div>
-                <p className="text-lg">Live browser will appear here</p>
-                <p className="text-sm mt-1">Learn a site or run a task to start</p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Controls Panel */}
-        <div className="w-[420px] border-l border-slate-700 flex flex-col overflow-hidden">
+      <div className="h-[calc(100vh-65px)]">
+        {/* Controls Panel */}
+        <div className="max-w-2xl mx-auto flex flex-col overflow-hidden h-full">
           {/* Tab Switcher */}
           <div className="flex border-b border-slate-700">
-            {(['learn', 'scrape', 'monitor', 'watch', 'custom'] as Tab[]).map((t) => (
+            {VISIBLE_TABS.map((t) => (
               <button
                 key={t}
                 onClick={() => { setTab(t); resetState() }}

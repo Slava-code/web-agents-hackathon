@@ -1,7 +1,34 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git read-tree:*)",
+      "Bash(git config:*)",
+      "WebFetch(domain:docs.convex.dev)",
+      "WebFetch(domain:stack.convex.dev)",
+      "Bash(claude mcp add-json:*)",
+      "mcp__convex__status",
+      "mcp__convex__tables",
+      "mcp__convex__data",
+      "Bash(node -e:*)",
+      "Bash(npx next build)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)",
+      "Bash(npx convex deploy:*)",
+      "Bash(npx vercel env:*)",
+      "Bash(npx convex dev:*)",
+      "Bash(CONVEX_DEPLOYMENT=prod:hardy-gnat-785 npx convex run:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(curl:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh auth:*)",
+      "Bash(python3:*)",
+      "mcp__convex__runOneoffQuery"
     ]
   }
 }
