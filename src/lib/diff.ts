@@ -5,6 +5,17 @@ export interface DiffResult {
   hasChanges: boolean;
 }
 
+/** Normalize a value for comparison — handles LLM scraping inconsistencies */
+function normalize(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  const s = String(val).trim().toLowerCase();
+  // Normalize boolean-like values
+  if (s === "true" || s === "checked" || s === "yes") return "true";
+  if (s === "false" || s === "unchecked" || s === "no") return "false";
+  // Strip common label prefixes the LLM sometimes includes
+  return s.replace(/^(unit|user|surgeon|procedure|status):\s*/i, "");
+}
+
 export function diffSnapshots(
   previous: Record<string, unknown>,
   current: Record<string, unknown>
@@ -16,7 +27,7 @@ export function diffSnapshots(
   for (const key of Object.keys(current)) {
     if (!(key in previous)) {
       added[key] = current[key];
-    } else if (JSON.stringify(previous[key]) !== JSON.stringify(current[key])) {
+    } else if (normalize(previous[key]) !== normalize(current[key])) {
       changed[key] = { old: previous[key], new: current[key] };
     }
   }

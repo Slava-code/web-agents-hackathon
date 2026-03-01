@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { recallSnapshots, storeSnapshot, storeDiff, recallRoute } from "@/lib/supermemory";
-import { loadSiteConfig, buildMemoryPrompt } from "@/lib/site-config";
+import { storeSnapshot, storeDiff, recallRoute } from "@/lib/supermemory";
+import { loadSiteConfig, buildMemoryPrompt, loadLastSnapshot, saveSnapshot } from "@/lib/site-config";
 import { ROUTE_TO_DEVICE, CONVEX_URL } from "@/lib/device-mapping";
 import { diffSnapshots, diffToFieldUpdate, parseSnapshotContent } from "@/lib/diff";
 import type { DiffResult } from "@/lib/diff";
@@ -61,13 +61,10 @@ export async function POST(req: NextRequest) {
           return;
         }
 
-        // 2. Recall previous snapshot from Supermemory
+        // 2. Load previous snapshot from local storage (reliable)
         let previousData: Record<string, unknown> | null = null;
         try {
-          const snapshots = await recallSnapshots(hostname, routePath, containerId);
-          if (snapshots.length > 0) {
-            previousData = parseSnapshotContent(snapshots[0].content);
-          }
+          previousData = await loadLastSnapshot(hostname, routePath);
         } catch {
           // no previous snapshot, first run
         }
@@ -97,7 +94,7 @@ export async function POST(req: NextRequest) {
         // 4. Poll until done
         const terminalStatuses = ["idle", "stopped", "timed_out", "error"];
         let lastStatus = session.status;
-        let finalOutput: string | null = null;
+        let finalOutput: unknown = null;
         let cost = "0";
 
         while (true) {
@@ -124,7 +121,7 @@ export async function POST(req: NextRequest) {
             cost = state.totalCostUsd ?? "0";
 
             // Check session files if output isn't JSON
-            if (finalOutput && !finalOutput.trim().startsWith("{")) {
+            if (finalOutput && typeof finalOutput === "string" && !finalOutput.trim().startsWith("{")) {
               try {
                 const filesRes = await fetch(
                   `${BU_API}/sessions/${session.id}/files?includeUrls=true`,
@@ -157,28 +154,32 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // 5. Parse scrape output
+        // 5. Parse scrape output (may be string or object)
         let currentData: Record<string, unknown> | null = null;
         if (finalOutput) {
-          try {
-            const cleaned = finalOutput.trim();
-            const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
-            currentData = JSON.parse(jsonMatch ? jsonMatch[1].trim() : cleaned);
-          } catch {
-            // Try to extract JSON object
-            const match = finalOutput.match(/\{[\s\S]*\}/);
-            if (match) {
-              try {
-                currentData = JSON.parse(match[0]);
-              } catch {
-                // not parseable
+          if (typeof finalOutput === "object" && finalOutput !== null) {
+            currentData = finalOutput as Record<string, unknown>;
+          } else if (typeof finalOutput === "string") {
+            try {
+              const cleaned = finalOutput.trim();
+              const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
+              currentData = JSON.parse(jsonMatch ? jsonMatch[1].trim() : cleaned);
+            } catch {
+              const match = finalOutput.match(/\{[\s\S]*\}/);
+              if (match) {
+                try {
+                  currentData = JSON.parse(match[0]);
+                } catch {
+                  // not parseable
+                }
               }
             }
           }
         }
 
         if (!currentData) {
-          send({ type: "error", message: "Could not parse scrape output as JSON", rawOutput: finalOutput?.slice(0, 300) });
+          const raw = typeof finalOutput === "string" ? finalOutput?.slice(0, 300) : JSON.stringify(finalOutput)?.slice(0, 300);
+          send({ type: "error", message: "Could not parse scrape output as JSON", rawOutput: raw });
           controller.close();
           return;
         }
@@ -260,7 +261,8 @@ export async function POST(req: NextRequest) {
           });
         }
 
-        // 8. Store snapshot + diff in Supermemory
+        // 8. Store snapshot locally (for reliable diff) + in Supermemory (for search)
+        await saveSnapshot(hostname, routePath, currentData);
         const snapshotStored = await storeSnapshot(hostname, routePath, currentData, containerId);
         let diffStored = false;
         if (diff.hasChanges) {

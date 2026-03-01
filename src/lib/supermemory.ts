@@ -83,7 +83,7 @@ ${fieldSummary}`;
   try {
     await client.add({
       content,
-      containerTag: tag,
+      containerTags: [tag],
       customId: `learned_${sanitize(hostname)}_${sanitize(route.path)}`,
       metadata: {
         type: "learned_route",
@@ -121,7 +121,7 @@ ${JSON.stringify(data, null, 2)}`;
   try {
     await client.add({
       content,
-      containerTag: tag,
+      containerTags: [tag],
       customId: `snapshot_${sanitize(hostname)}_${sanitize(path)}_${Date.now()}`,
       metadata: {
         type: "snapshot",
@@ -158,7 +158,7 @@ export async function recallRoute(
 
   try {
     const result = await client.search.documents({
-      containerTag: tag,
+      containerTags: [tag],
       q: `selectors and fields for ${path}`,
       filters: {
         AND: [
@@ -168,9 +168,10 @@ export async function recallRoute(
       },
     });
 
-    return (result.results || []).map((r: { chunks?: { content: string }[]; metadata?: Record<string, unknown> }) => ({
-      content: (r.chunks || []).map((c) => c.content).join("\n"),
-      metadata: r.metadata,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (result.results || []).map((r: any) => ({
+      content: (r.chunks || []).map((c: any) => c.content).join("\n"),
+      metadata: r.metadata ?? {},
     }));
   } catch (e) {
     console.error("[supermemory] Recall error:", e);
@@ -195,7 +196,8 @@ export async function recallSnapshots(
       ? `recent data from ${hostname}${path}`
       : `recent data from ${hostname}`;
 
-    const filters: Record<string, unknown> = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filters: any = {
       AND: [
         { key: "type", value: "snapshot", filterType: "metadata" },
         { key: "hostname", value: hostname, filterType: "metadata" },
@@ -207,14 +209,15 @@ export async function recallSnapshots(
     }
 
     const result = await client.search.documents({
-      containerTag: tag,
+      containerTags: [tag],
       q,
       filters,
     });
 
-    return (result.results || []).map((r: { chunks?: { content: string }[]; metadata?: Record<string, unknown> }) => ({
-      content: (r.chunks || []).map((c) => c.content).join("\n"),
-      metadata: r.metadata,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (result.results || []).map((r: any) => ({
+      content: (r.chunks || []).map((c: any) => c.content).join("\n"),
+      metadata: r.metadata ?? {},
     }));
   } catch (e) {
     console.error("[supermemory] Snapshots error:", e);
@@ -257,7 +260,7 @@ ${removedSummary || "  (none)"}`;
   try {
     await client.add({
       content,
-      containerTag: tag,
+      containerTags: [tag],
       customId: `diff_${sanitize(hostname)}_${sanitize(path)}_${Date.now()}`,
       metadata: {
         type: "diff",
@@ -295,7 +298,8 @@ export async function recallDiffs(
       ? `recent changes for ${hostname}${path}`
       : `recent changes for ${hostname}`;
 
-    const filters: Record<string, unknown> = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filters: any = {
       AND: [
         { key: "type", value: "diff", filterType: "metadata" },
         { key: "hostname", value: hostname, filterType: "metadata" },
@@ -307,14 +311,15 @@ export async function recallDiffs(
     }
 
     const result = await client.search.documents({
-      containerTag: tag,
+      containerTags: [tag],
       q,
       filters,
     });
 
-    return (result.results || []).map((r: { chunks?: { content: string }[]; metadata?: Record<string, unknown> }) => ({
-      content: (r.chunks || []).map((c) => c.content).join("\n"),
-      metadata: r.metadata,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (result.results || []).map((r: any) => ({
+      content: (r.chunks || []).map((c: any) => c.content).join("\n"),
+      metadata: r.metadata ?? {},
     }));
   } catch (e) {
     console.error("[supermemory] Diffs recall error:", e);
