@@ -92,7 +92,7 @@ export const init = internalMutation({
       {
         name: "TUG Fleet Monitor",
         category: "transport",
-        url: "http://localhost:3000/tug-fleet",
+        url: "http://localhost:3000/tug-robot",
         fields: {
           activeUnits: "0 / 4",
           enRouteCount: 0,

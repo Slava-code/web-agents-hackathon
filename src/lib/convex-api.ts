@@ -2,8 +2,8 @@ const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://impa
 
 // Device IDs from seed data
 export const DEVICE_IDS = {
-  UV_ROBOT: 'jd72bxwjgw87028ccbp6zzmaes823nys',
-  TUG_ROBOT: 'jd74ec16aby2rbteq1rwjcc0t1822pfx',
+  UV_ROBOT: 'jd7746s4q8nf1qz7mm12sctdch823n4y',
+  TUG_ROBOT: 'jd79qkkb7hts62yqxkv5srwapd823an9',
   VARIABLE_TRACKER: 'placeholder-variable-tracker',
   ENV_MONITORING: 'placeholder-env-monitoring',
   SCHEDULING: 'placeholder-scheduling',
@@ -11,10 +11,10 @@ export const DEVICE_IDS = {
 
 // Room IDs
 export const ROOM_IDS = {
-  OR_1: 'jn74ng7t47dm867bf9ysewzx61823jcd',
-  OR_2: 'jn7dyd2x59n44q4bwxve0ghk3h822kr2',
-  OR_3: 'jn7fbnzdjjxxsq1c5v03ptq2hx822h41',
-  OR_4: 'jn7e11r2yq5mfbyz7v1x1e81wn823gmj',
+  OR_1: 'jn727k23ar820y8tgx894c39k5822emc',
+  OR_2: 'jn73m907ax98083sk0brmhp55h823tty',
+  OR_3: 'jn73r5arpm1m4trqt44ean1hhh822j46',
+  OR_4: 'jn70f574pbckmsqd36jp1t1q5d822mvj',
 } as const
 
 export type DeviceStatus = 'idle' | 'configuring' | 'ready' | 'error'

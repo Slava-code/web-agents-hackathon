@@ -61,7 +61,7 @@ Get full room state including devices and environment readings.
 ```json
 {
   "room": {
-    "_id": "jn7fbnzdjjxxsq1c5v03ptq2hx822h41",
+    "_id": "jn73r5arpm1m4trqt44ean1hhh822j46",
     "name": "OR-3",
     "status": "idle",
     "deviceCount": 2,
@@ -70,20 +70,20 @@ Get full room state including devices and environment readings.
   },
   "devices": [
     {
-      "_id": "jd72bxwjgw87028ccbp6zzmaes823nys",
+      "_id": "jd7746s4q8nf1qz7mm12sctdch823n4y",
       "name": "UV Robot",
       "category": "sterilization",
-      "roomId": "jn7fbnzdjjxxsq1c5v03ptq2hx822h41",
+      "roomId": "jn73r5arpm1m4trqt44ean1hhh822j46",
       "url": "http://localhost:3000/uv-robot",
       "status": "idle",
       "fields": {},
       "updatedAt": 1772340463471
     },
     {
-      "_id": "jd74ec16aby2rbteq1rwjcc0t1822pfx",
+      "_id": "jd79qkkb7hts62yqxkv5srwapd823an9",
       "name": "TUG Fleet Monitor",
       "category": "transport",
-      "roomId": "jn7fbnzdjjxxsq1c5v03ptq2hx822h41",
+      "roomId": "jn73r5arpm1m4trqt44ean1hhh822j46",
       "url": "http://localhost:3000/tug-robot",
       "status": "idle",
       "fields": {},
@@ -102,17 +102,17 @@ Get full room state including devices and environment readings.
 
 | Room | ID | Status | Devices |
 |------|----|--------|---------|
-| OR-1 | `jn74ng7t47dm867bf9ysewzx61823jcd` | ready | 0 |
-| OR-2 | `jn7dyd2x59n44q4bwxve0ghk3h822kr2` | ready | 0 |
-| OR-3 | `jn7fbnzdjjxxsq1c5v03ptq2hx822h41` | idle | 2 |
-| OR-4 | `jn7e11r2yq5mfbyz7v1x1e81wn823gmj` | ready | 0 |
+| OR-1 | `jn727k23ar820y8tgx894c39k5822emc` | ready | 0 |
+| OR-2 | `jn73m907ax98083sk0brmhp55h823tty` | ready | 0 |
+| OR-3 | `jn73r5arpm1m4trqt44ean1hhh822j46` | idle | 2 |
+| OR-4 | `jn70f574pbckmsqd36jp1t1q5d822mvj` | ready | 0 |
 
 ### Devices (OR-3)
 
 | Device | ID | Category | URL |
 |--------|----|----------|-----|
-| UV Robot | `jd72bxwjgw87028ccbp6zzmaes823nys` | sterilization | localhost:3000/uv-robot |
-| TUG Fleet Monitor | `jd74ec16aby2rbteq1rwjcc0t1822pfx` | transport | localhost:3000/tug-robot |
+| UV Robot | `jd7746s4q8nf1qz7mm12sctdch823n4y` | sterilization | localhost:3000/uv-robot |
+| TUG Fleet Monitor | `jd79qkkb7hts62yqxkv5srwapd823an9` | transport | localhost:3000/tug-robot |
 
 ---
 
@@ -143,7 +143,7 @@ import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 
 const state = useQuery(api.roomQueries.getRoomStatePublic, {
-  roomId: "jn7fbnzdjjxxsq1c5v03ptq2hx822h41",  // OR-3
+  roomId: "jn73r5arpm1m4trqt44ean1hhh822j46",  // OR-3
 });
 ```
 

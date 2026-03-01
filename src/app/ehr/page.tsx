@@ -526,7 +526,7 @@ export default function EHRSystem() {
       {/* Footer status bar */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-1 flex justify-between text-xs text-gray-500">
         <span>CareConnect v12.4.2 | Surgical Module</span>
-        <span>Last sync: {new Date().toLocaleTimeString()}</span>
+        <span suppressHydrationWarning>Last sync: {new Date().toLocaleTimeString()}</span>
         <span>Session expires in 58 minutes</span>
       </footer>
     </div>
