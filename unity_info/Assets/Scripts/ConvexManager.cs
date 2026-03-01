@@ -38,7 +38,7 @@ public class ConvexManager : MonoBehaviour
     private static readonly Dictionary<string, string> StatusMap = new Dictionary<string, string>
     {
         { "idle", "idle" },
-        { "configuring", "running" },
+        { "configuring", "active" },
         { "ready", "complete" },
         { "error", "error" },
     };
