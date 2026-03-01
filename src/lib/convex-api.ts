@@ -1,11 +1,11 @@
-const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://adept-wren-805.convex.site'
+const CONVEX_SITE_URL = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || 'https://impartial-whale-32.convex.site'
 
-// Device IDs from the adept-wren-805 deployment (OR-3 devices)
+// Device IDs from the impartial-whale-32 deployment (OR-3 devices)
 export const DEVICE_IDS = {
-  UV_ROBOT: 'jd73ve7m965tg28kbcffs4nhh582253p',
-  TUG_ROBOT: 'jd79jwzj5893812hkgf68dz3vh822aa2',
-  ENV_MONITORING: 'jd7a1249k2xq68q6b7yxwh9vnx822d6b',
-  SCHEDULING: 'jd7drsdfe5h2d9hq06ap95gx9d82244t',
+  UV_ROBOT: 'jd71dxprgfe2c1m191bt6a79g98225x2',
+  TUG_ROBOT: 'jd70sm9tht7kq7p0t20n22ptrn822tn5',
+  ENV_MONITORING: 'jd79481zr4jt3pggjebcf7y2nn823cp5',
+  SCHEDULING: 'jd7d79sep5x1q0hmetevhmcnbx8231js',
 } as const
 
 // Room IDs
