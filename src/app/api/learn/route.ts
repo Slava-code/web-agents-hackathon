@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { writeFile } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
+import { storeLearnedRoute } from "@/lib/supermemory";
 
 const BU_API = "https://api.browser-use.com/api/v3";
 const POLL_INTERVAL_MS = 2000;
@@ -58,15 +59,26 @@ async function pollSession(
   }
 }
 
-function parseAgentOutput(raw: string | null): {
+function parseAgentOutput(raw: unknown): {
   pagePurpose: string;
   pageLayout: string;
   fields: { name: string; selector: string; sampleValue: string; type: string }[];
 } | null {
   if (!raw) return null;
+  // Ensure raw is a string
+  let rawStr: string;
+  if (typeof raw === "string") {
+    rawStr = raw;
+  } else {
+    try {
+      rawStr = JSON.stringify(raw);
+    } catch {
+      return null;
+    }
+  }
   try {
     // Try to find JSON in the output
-    let cleaned = raw.trim();
+    let cleaned = rawStr.trim();
     // Strip markdown code fences
     const jsonMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
     if (jsonMatch) cleaned = jsonMatch[1].trim();
@@ -79,7 +91,8 @@ function parseAgentOutput(raw: string | null): {
     };
   } catch {
     // Try to extract JSON object from the text
-    const match = raw.match(/\{[\s\S]*\}/);
+    const rawStr = typeof raw === "string" ? raw : "";
+    const match = rawStr.match(/\{[\s\S]*\}/);
     if (match) {
       try {
         const data = JSON.parse(match[0]);
@@ -102,7 +115,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "BROWSER_USE_API_KEY not set" }, { status: 500 });
   }
 
-  const { baseUrl, routes } = await req.json();
+  const { baseUrl, routes, containerId } = await req.json();
   if (!baseUrl || !Array.isArray(routes) || routes.length === 0) {
     return Response.json(
       { error: "baseUrl and routes[] are required" },
@@ -188,6 +201,10 @@ export async function POST(req: NextRequest) {
               cost: result.cost,
             };
             learnedRoutes.push(learned);
+
+            // Store in Supermemory for fast recall
+            const stored = await storeLearnedRoute(hostname, baseUrl.replace(/\/$/, ""), learned, containerId);
+
             send({
               type: "learned",
               route,
@@ -195,6 +212,7 @@ export async function POST(req: NextRequest) {
               fieldCount: parsed.fields.length,
               fields: parsed.fields.slice(0, 5), // preview first 5
               cost: result.cost,
+              supermemory: stored,
             });
           } else {
             send({
@@ -215,6 +233,7 @@ export async function POST(req: NextRequest) {
         const config = {
           id: siteId,
           hostname,
+          containerId: containerId || null,
           baseUrl: baseUrl.replace(/\/$/, ""),
           learnedAt: new Date().toISOString(),
           totalCost: totalCost.toFixed(6),
