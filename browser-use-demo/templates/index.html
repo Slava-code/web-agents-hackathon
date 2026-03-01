@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BROWSER_USE // TERMINAL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="scanlines"></div>
+  <div class="crt-flicker"></div>
+
+  <div class="terminal-frame">
+    <header class="terminal-header">
+      <div class="header-left">
+        <span class="dot red"></span>
+        <span class="dot yellow"></span>
+        <span class="dot green"></span>
+      </div>
+      <div class="header-title">
+        <span class="blink-cursor">_</span> BROWSER_USE <span class="dim">// CLOUD AGENT</span>
+      </div>
+      <div class="header-right">
+        <span class="status-indicator" id="statusDot"></span>
+        <span class="status-text" id="statusText">IDLE</span>
+      </div>
+    </header>
+
+    <main class="terminal-body">
+      <!-- Input panel -->
+      <section class="input-panel">
+        <div class="input-group">
+          <label class="input-label">
+            <span class="label-prefix">&gt;</span> MISSION OBJECTIVE
+          </label>
+          <textarea id="taskInput" class="terminal-input" rows="2"
+            placeholder="e.g. Go to news.ycombinator.com and get the top 3 stories with their scores..."
+            spellcheck="false"></textarea>
+        </div>
+        <div class="input-row">
+          <div class="input-group flex-1">
+            <label class="input-label">
+              <span class="label-prefix">&gt;</span> START URL <span class="dim">(optional)</span>
+            </label>
+            <input type="url" id="urlInput" class="terminal-input mono" placeholder="https://" spellcheck="false" />
+          </div>
+          <button id="executeBtn" class="execute-btn" onclick="executeTask()">
+            <span class="btn-text">EXECUTE</span>
+            <span class="btn-icon">&#9654;</span>
+          </button>
+        </div>
+        <div class="quick-tasks">
+          <span class="dim small">QUICK OPS:</span>
+          <button class="chip" onclick="loadPreset('hacker-news')">HN Top Stories</button>
+          <button class="chip" onclick="loadPreset('wikipedia')">Wikipedia Lookup</button>
+          <button class="chip" onclick="loadPreset('weather')">Weather Check</button>
+          <button class="chip" onclick="loadPreset('github')">GitHub Trending</button>
+        </div>
+      </section>
+
+      <!-- Tab bar -->
+      <div class="tab-bar">
+        <button class="tab active" data-tab="live" onclick="switchTab('live')">
+          <span class="tab-dot" id="liveDot"></span> LIVE VIEW
+        </button>
+        <button class="tab" data-tab="trajectory" onclick="switchTab('trajectory')">
+          TRAJECTORY <span class="tab-badge" id="trajBadge">0</span>
+        </button>
+        <button class="tab" data-tab="log" onclick="switchTab('log')">
+          RAW LOG
+        </button>
+        <div class="tab-bar-right">
+          <span class="footer-item">SESSION: <span id="sessionId" class="highlight">--</span></span>
+          <span class="footer-item">COST: <span id="costDisplay" class="highlight">--</span></span>
+        </div>
+      </div>
+
+      <!-- Tab: Live View -->
+      <section class="tab-content active" id="tabLive">
+        <div class="live-split">
+          <div class="viewer-container" id="viewerContainer">
+            <div class="viewer-placeholder" id="viewerPlaceholder">
+              <div class="placeholder-icon">&#9678;</div>
+              <p>Live browser feed appears here when the agent starts</p>
+            </div>
+            <iframe id="liveFrame" class="live-frame" style="display:none;" allow="autoplay"></iframe>
+          </div>
+          <div class="live-sidebar" id="liveSidebar">
+            <div class="sidebar-title">STEP LOG</div>
+            <div class="sidebar-steps" id="sidebarSteps">
+              <div class="sidebar-empty">Waiting for agent...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Trajectory -->
+      <section class="tab-content" id="tabTrajectory">
+        <div class="trajectory-container" id="trajectoryContainer">
+          <div class="traj-empty" id="trajEmpty">
+            <p>No trajectory data yet. Execute a task to see the full step-by-step trace.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab: Raw Log -->
+      <section class="tab-content" id="tabLog">
+        <div class="raw-log" id="rawLog">
+          <div class="welcome-message">
+            <pre class="ascii-art">
+ ____  ____   ___  _    _ ____  _____ ____
+| __ )|  _ \ / _ \| |  | / ___|| ____|  _ \
+|  _ \| |_) | | | | |  | \___ \|  _| | |_) |
+| |_) |  _ &lt;| |_| | |/\| |___) | |___|  _ &lt;
+|____/|_| \_\\___/|__/\__|____/|_____|_| \_\
+            </pre>
+            <p class="welcome-sub">Full Trajectory Tracking // Ready</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Summary bar (shown after completion) -->
+      <div class="summary-bar" id="summaryBar" style="display:none;">
+        <span>LLM: <span id="sumLlm" class="highlight">--</span></span>
+        <span>STEPS: <span id="sumSteps" class="highlight">0</span></span>
+        <span>COST: <span id="sumCost" class="highlight">--</span></span>
+        <span>TIME: <span id="sumTime" class="highlight">--</span></span>
+        <span id="sumVerdict"></span>
+      </div>
+    </main>
+
+    <footer class="terminal-footer">
+      <span class="footer-item">TASK: <span id="taskId" class="highlight">--</span></span>
+      <span class="footer-item">STEPS: <span id="stepCount" class="highlight">0</span></span>
+      <span class="footer-item timestamp" id="timestamp"></span>
+    </footer>
+  </div>
+
+  <!-- Screenshot lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <div class="lightbox-inner" onclick="event.stopPropagation()">
+      <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+      <img id="lightboxImg" src="" alt="Screenshot" />
+      <div class="lightbox-caption" id="lightboxCaption"></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
