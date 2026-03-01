@@ -267,15 +267,109 @@ export default function CommandCenter() {
     }
   }
 
+  // --- Demo simulation: timed Convex writes to drive Unity ───────────
+  async function runDemoSimulation() {
+    setOrchestrating(true)
+    setOrchestratePhase(0)
+    setOrchestrateEvents([])
+    setOrchestrateCost(null)
+    setOrchestrateDone(false)
+    setOrchestrateFailed(false)
+    setOrchestrateTotalPhases(4)
+    setOrchestrateScenario('ventilation_failure')
+    setBrowserStatus('running')
+
+    const post = (path: string, body: object) =>
+      fetch(`${CONVEX_SITE_URL}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(r => r.json())
+
+    const addEvent = (msg: string) => {
+      const id = nextEventId.current++
+      setBrowserEvents(prev => [...prev, { id, timestamp: Date.now(), data: { type: 'status', status: msg, output: null, cost: null } }])
+    }
+
+    const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+    try {
+      // Reset previous scenario
+      await post('/coordination-reset', {})
+
+      // Create emergency scenario
+      const cmdId = `cmd-demo-${Date.now()}`
+      const result = await post('/coordination-start', {
+        commandId: cmdId,
+        roomId: OR3_ID,
+        scenario: 'emergency_air_quality_response',
+      })
+      const { env, tug, uv, ehr } = result.tasks
+      addEvent('Scenario created — 4 phases initialized')
+
+      // ── PHASE 1: ENV (5s quick pass) ──
+      setOrchestratePhase(1)
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 1, agentId: 'env-agent', taskName: 'ENV Detect & Assess Anomaly' }])
+      addEvent('Phase 1/4: ENV Detect & Assess Anomaly')
+      await post('/agent-task-update', { taskId: env, status: 'running' })
+      await wait(5000)
+      await post('/agent-task-update', { taskId: env, status: 'completed', output: { alertsAcknowledged: 3, assessment: 'Critical CO2 and particulate levels' } })
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 1, agentId: 'env-agent', output: {}, cost: '$0.00' }])
+      addEvent('Phase 1 complete — anomaly assessed')
+
+      // ── PHASE 2: TUG (2s buffer + 20s video + 2s buffer = 24s) ──
+      setOrchestratePhase(2)
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 2, agentId: 'tug-agent', taskName: 'TUG Emergency Supply Delivery' }])
+      addEvent('Phase 2/4: TUG Emergency Supply Delivery')
+      await post('/agent-task-update', { taskId: tug, status: 'running' })
+      await wait(24000)
+      await post('/agent-task-update', { taskId: tug, status: 'completed', output: { delivered: true, botId: 'TUG-01', supplies: ['HEPA filters', 'air quality sensors'] } })
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 2, agentId: 'tug-agent', output: {}, cost: '$0.00' }])
+      addEvent('Phase 2 complete — supplies delivered')
+
+      // ── PHASE 3: UV (2s buffer + 20s video + 2s buffer = 24s) ──
+      setOrchestratePhase(3)
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 3, agentId: 'uv-agent', taskName: 'UV Sterilization Cycle' }])
+      addEvent('Phase 3/4: UV Sterilization Cycle')
+      await post('/agent-task-update', { taskId: uv, status: 'running' })
+      await wait(24000)
+      await post('/agent-task-update', { taskId: uv, status: 'completed', output: { sterilized: true, mode: 'Terminal', intensity: 100 } })
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 3, agentId: 'uv-agent', output: {}, cost: '$0.00' }])
+      addEvent('Phase 3 complete — sterilization done')
+
+      // ── PHASE 4: EHR (3s quick wrap) ──
+      setOrchestratePhase(4)
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_start', phase: 4, agentId: 'ehr-agent', taskName: 'EHR Confirm Room Ready' }])
+      addEvent('Phase 4/4: EHR Confirm Room Ready')
+      await post('/agent-task-update', { taskId: ehr, status: 'running' })
+      await wait(3000)
+      await post('/agent-task-update', { taskId: ehr, status: 'completed', output: { roomStatus: 'Ready', delayMinutes: 0, confirmed: true } })
+      setOrchestrateEvents(prev => [...prev, { type: 'phase_complete', phase: 4, agentId: 'ehr-agent', output: {}, cost: '$0.00' }])
+      addEvent('Phase 4 complete — room confirmed ready')
+
+      // Done
+      setOrchestrateDone(true)
+      setBrowserStatus('complete')
+      const id = nextEventId.current++
+      setBrowserEvents(prev => [...prev, { id, timestamp: Date.now(), data: { type: 'done', status: 'complete', output: null, cost: '$0.00' } }])
+    } catch (err: any) {
+      setOrchestrateFailed(true)
+      setBrowserStatus('error')
+      addEvent(`Error: ${err.message}`)
+    } finally {
+      setOrchestrating(false)
+    }
+  }
+
   // --- Handlers ---
   async function handleSubmitCommand(e: React.FormEvent) {
     e.preventDefault()
     if (!commandText.trim() || orchestrating || browserRunning) return
     const text = commandText.trim()
     setCommandText('')
-    // Fire Convex command + orchestrate prepare_room
+    // Fire Convex command + run demo simulation (timed Convex writes → Unity)
     await submitCommand({ text, roomId: OR3_ID })
-    handleOrchestrate('prepare_room')
+    runDemoSimulation()
   }
 
   function handleStop() {

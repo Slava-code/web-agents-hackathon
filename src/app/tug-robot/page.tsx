@@ -59,6 +59,14 @@ export default function TUGDashboard() {
         // Normal progression (deployed bots without a freeze cap)
         const newProgress = bot.progress + baseIncrement
         if (bot.status === 'EN_ROUTE' && newProgress >= 100) {
+          // Report completion to Convex (yellow border → green border)
+          if (bot.id === 'TUG-01') {
+            updateDeviceStatus({
+              deviceId: DEVICE_IDS.TUG_ROBOT,
+              status: 'ready',
+              currentAction: 'Bot TUG-01 arrived at Sterilization'
+            })
+          }
           return { ...bot, progress: 100, status: 'ARRIVED' }
         }
         if (bot.status === 'RETURNING' && newProgress >= 100) {
@@ -66,9 +74,23 @@ export default function TUGDashboard() {
         }
         return { ...bot, progress: newProgress }
       }))
-    }, 200)
+    }, 400)
     return () => clearInterval(interval)
   }, [])
+
+  // Press Enter to deploy TUG-01 (Alpha) if it's IDLE
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        const alpha = bots.find(b => b.id === 'TUG-01')
+        if (alpha && alpha.status === 'IDLE') {
+          deployBot('TUG-01', alpha.source)
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [bots])
 
   const deployBot = (botId: string, source: string) => {
     setBots(prev => prev.map(bot => {

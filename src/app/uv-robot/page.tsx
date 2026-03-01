@@ -36,6 +36,17 @@ export default function UVRobotPortal() {
 
   const rooms = ['OR-1', 'OR-2', 'OR-3', 'OR-4', 'OR-5', 'PACU-1', 'PACU-2', 'Pre-Op-1']
 
+  // Press Enter to start cycle
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && !cycleActive && connectionStatus === 'connected') {
+        handleStartCycle()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [cycleActive, connectionStatus, mode, selectedRoom])
+
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000)
     return () => clearInterval(interval)
@@ -76,7 +87,7 @@ export default function UVRobotPortal() {
           }
           return prev + 2
         })
-      }, 300)
+      }, 400)
     }
     return () => clearInterval(interval)
   }, [cycleActive, progress, selectedRoom])
