@@ -75,7 +75,7 @@ ${sampleHints}
 
 // ─── Local snapshot storage (reliable, not semantic-search dependent) ──
 
-const SNAPSHOTS_DIR = join(process.cwd(), "data", "snapshots");
+const SNAPSHOTS_DIR = process.env.VERCEL ? join("/tmp", "snapshots") : join(process.cwd(), "data", "snapshots");
 
 function snapshotPath(hostname: string, routePath: string): string {
   const safe = `${hostname}${routePath}`.replace(/[^a-zA-Z0-9.-]/g, "_");
