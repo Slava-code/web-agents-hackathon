@@ -61,7 +61,7 @@ Get full room state including devices and environment readings.
 ```json
 {
   "room": {
-    "_id": "jn70gpgs6pz5px867y7wak311s823sm0",
+    "_id": "jn7bw19xt7a818kvh3w5dhxvvd823j8a",
     "name": "OR-3",
     "status": "idle",
     "deviceCount": 4,
@@ -70,28 +70,28 @@ Get full room state including devices and environment readings.
   },
   "devices": [
     {
-      "_id": "jd766xcd11tc7jbbfqpgmmr73s8225mg",
+      "_id": "jd71dxprgfe2c1m191bt6a79g98225x2",
       "name": "UV Robot",
       "category": "sterilization",
       "status": "idle",
       "fields": { "..." : "..." }
     },
     {
-      "_id": "jd76tazf69jdn56bafxb76zbfn823azs",
+      "_id": "jd70sm9tht7kq7p0t20n22ptrn822tn5",
       "name": "TUG Fleet Monitor",
       "category": "transport",
       "status": "idle",
       "fields": { "..." : "..." }
     },
     {
-      "_id": "jd7dq5j3qdhdt6j8eh0n4s63eh82211t",
+      "_id": "jd79481zr4jt3pggjebcf7y2nn823cp5",
       "name": "Environmental Monitoring",
       "category": "monitoring",
       "status": "idle",
       "fields": { "co2": 750, "particulate": 95, "..." : "..." }
     },
     {
-      "_id": "jd7fas480h1xaf65ny9t42xawd823k3p",
+      "_id": "jd7d79sep5x1q0hmetevhmcnbx8231js",
       "name": "Room Scheduling",
       "category": "scheduling",
       "status": "idle",
@@ -439,19 +439,19 @@ Manually restore safe environmental readings and reset room to ready. Called aut
 
 | Room | ID | Status | Devices |
 |------|----|--------|---------|
-| OR-1 | `jn78nzxs95pfp15xrv43t5b6ks823tv4` | ready | 0 |
-| OR-2 | `jn78n3nbtv60ead9xe81mwx24d822qrf` | ready | 0 |
-| OR-3 | `jn70gpgs6pz5px867y7wak311s823sm0` | idle | 4 |
-| OR-4 | `jn7bdjywxy9ks7fffc9ys96001823pfk` | ready | 0 |
+| OR-1 | `jn77dth55k7d2600v9hx3dbk4s822646` | ready | 3 |
+| OR-2 | `jn78nfx1s528tz8cknq4c8g44d823yvv` | ready | 2 |
+| OR-3 | `jn7bw19xt7a818kvh3w5dhxvvd823j8a` | idle | 4 |
+| OR-4 | `jn7caae78h5qg7pthmzav3yx4n8224ee` | ready | 4 |
 
 ### Devices (OR-3)
 
 | Device | ID | Category | URL |
 |--------|----|----------|-----|
-| UV Robot | `jd766xcd11tc7jbbfqpgmmr73s8225mg` | sterilization | localhost:3000/uv-robot |
-| TUG Fleet Monitor | `jd76tazf69jdn56bafxb76zbfn823azs` | transport | localhost:3000/tug-robot |
-| Environmental Monitoring | `jd7dq5j3qdhdt6j8eh0n4s63eh82211t` | monitoring | localhost:3000/environmental |
-| Room Scheduling | `jd7fas480h1xaf65ny9t42xawd823k3p` | scheduling | localhost:3000/ehr |
+| UV Robot | `jd71dxprgfe2c1m191bt6a79g98225x2` | sterilization | localhost:3000/uv-robot |
+| TUG Fleet Monitor | `jd70sm9tht7kq7p0t20n22ptrn822tn5` | transport | localhost:3000/tug-robot |
+| Environmental Monitoring | `jd79481zr4jt3pggjebcf7y2nn823cp5` | monitoring | localhost:3000/environmental |
+| Room Scheduling | `jd7d79sep5x1q0hmetevhmcnbx8231js` | scheduling | localhost:3000/ehr |
 
 ---
 
@@ -482,7 +482,7 @@ import { useQuery } from "convex/react";
 import { api } from "../convex/_generated/api";
 
 const state = useQuery(api.roomQueries.getRoomStatePublic, {
-  roomId: "jn70gpgs6pz5px867y7wak311s823sm0",  // OR-3
+  roomId: "jn7bw19xt7a818kvh3w5dhxvvd823j8a",  // OR-3
 });
 ```
 
