@@ -55,30 +55,42 @@ export async function pollSession(
  * Run a browser-use task end-to-end: create session → poll → stop → return output.
  * Returns the raw output (may be string or object).
  */
+const MAX_CREATE_RETRIES = 3;
+const RETRY_DELAY_MS = 10000;
+
 export async function runBrowserUseTask(
   task: string,
   apiKey: string,
   options?: { model?: string; keepAlive?: boolean; onStatus?: (status: string) => void }
 ): Promise<SessionResult> {
-  const createRes = await fetch(`${BU_API}/sessions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Browser-Use-API-Key": apiKey,
-    },
-    body: JSON.stringify({
-      task,
-      model: options?.model ?? "bu-mini",
-      keepAlive: options?.keepAlive ?? false,
-    }),
-  });
+  let createRes: Response | null = null;
 
-  if (!createRes.ok) {
+  for (let attempt = 1; attempt <= MAX_CREATE_RETRIES; attempt++) {
+    createRes = await fetch(`${BU_API}/sessions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Browser-Use-API-Key": apiKey,
+      },
+      body: JSON.stringify({
+        task,
+        model: options?.model ?? "bu-mini",
+        keepAlive: options?.keepAlive ?? false,
+      }),
+    });
+
+    if (createRes.ok) break;
+
     const err = await createRes.text();
-    throw new Error(`Browser-use session create failed: ${createRes.status} ${err}`);
+    if (attempt < MAX_CREATE_RETRIES && (err.includes("sandbox") || createRes.status >= 500)) {
+      options?.onStatus?.(`Retrying session create (attempt ${attempt + 1}/${MAX_CREATE_RETRIES})...`);
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    } else {
+      throw new Error(`Browser-use session create failed: ${createRes.status} ${err}`);
+    }
   }
 
-  const session = await createRes.json();
+  const session = await createRes!.json();
   const result = await pollSession(session.id, apiKey, options?.onStatus);
 
   // Stop the session
