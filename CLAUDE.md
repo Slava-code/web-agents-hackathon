@@ -1,1 +1,3 @@
+This is a hackathon project that simulates an **AI-powered operating room command center**. A user issues a voice/text command like "Prepare OR-3 for surgery," and **BrowserUse AI agents** autonomously navigate web dashboards (UV sterilization robots, TUG transport robots, environmental monitors) to configure devices, while a **Unity 3D simulation** visualizes the OR in real-time. Convex serves as the real-time backend hub — agents POST device updates, Unity polls room state, and the Next.js dashboards show live status. It's basically a demo of AI agents orchestrating physical hospital infrastructure through web UIs.
+
 Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
