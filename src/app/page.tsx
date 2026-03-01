@@ -28,12 +28,6 @@ export default function Home() {
       description: 'Epic/Cerner style - Dense, tab-heavy interface',
       color: 'from-orange-500 to-red-600',
     },
-    {
-      name: 'Variable Tracker',
-      path: '/camera',
-      description: 'Epic-style 2010s UI - UV & TUG metrics monitoring',
-      color: 'from-blue-600 to-blue-800',
-    },
   ]
 
   return (
@@ -43,7 +37,7 @@ export default function Home() {
           OR Turnover Vendor Dashboards
         </h1>
         <p className="text-slate-400 mb-8">
-          5 different medical device vendor interfaces for browser agent testing
+          4 different medical device vendor interfaces for browser agent testing
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

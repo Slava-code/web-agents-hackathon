@@ -129,20 +129,32 @@ export const triggerAnomaly = internalMutation({
       const envDevice = findDevice("Environmental Monitoring");
       if (!envDevice) throw new Error("Environmental Monitoring device not found in room");
 
-      // Spike environmental readings
+      const existingFields = envDevice.fields as Record<string, unknown>;
+      const spikedTemp = ((existingFields.temperature as number) || 71.2) + 3;
+
+      // Spike multiple readings simultaneously — agent must correlate the pattern
       const spikedFields = {
-        ...(envDevice.fields as Record<string, unknown>),
-        co2: 1200,
-        particulate: 150,
-        temperature: ((envDevice.fields as Record<string, unknown>).temperature as number || 71.2) + 3,
+        ...existingFields,
+        co2: 1200,                    // allowed: 400-800 ppm
+        particulate: 150,             // allowed: 0-100 μg/m³
+        temperature: spikedTemp,      // allowed: 65-72 °F
+        humidity: 68,                 // allowed: 30-60 %
+        pressureDifferential: 0.01,   // allowed: 0.03-0.10 inH₂O (positive pressure lost)
         allWithinRange: false,
         riskLevel: "critical",
-        status: "VENTILATION FAILURE DETECTED",
+        status: "MULTIPLE THRESHOLDS EXCEEDED",
+        outOfRangeFields: [
+          { field: "co2", value: 1200, allowed: { min: 400, max: 800 }, unit: "ppm" },
+          { field: "particulate", value: 150, allowed: { min: 0, max: 100 }, unit: "μg/m³" },
+          { field: "temperature", value: spikedTemp, allowed: { min: 65, max: 72 }, unit: "°F" },
+          { field: "humidity", value: 68, allowed: { min: 30, max: 60 }, unit: "%" },
+          { field: "pressureDifferential", value: 0.01, allowed: { min: 0.03, max: 0.10 }, unit: "inH₂O" },
+        ],
       };
 
       await ctx.db.patch(envDevice._id, {
         status: "error",
-        currentAction: "VENTILATION FAILURE DETECTED",
+        currentAction: "MULTIPLE THRESHOLDS EXCEEDED — 5 readings out of allowed range",
         fields: spikedFields,
         updatedAt: now,
       });
@@ -152,11 +164,11 @@ export const triggerAnomaly = internalMutation({
         roomId: args.roomId,
         co2: 1200,
         particulateCount: 150,
-        temperature: spikedFields.temperature as number,
-        humidity: (envDevice.fields as Record<string, unknown>).humidity as number || 52,
+        temperature: spikedTemp,
+        humidity: 68,
         pressureDifferential: 0.01,
         allWithinRange: false,
-        outOfRangeFields: ["co2", "particulate", "temperature"],
+        outOfRangeFields: ["co2", "particulate", "temperature", "humidity", "pressureDifferential"],
         timestamp: now,
       });
     } else if (args.scenario === "battery_failure") {
@@ -181,17 +193,22 @@ export const triggerAnomaly = internalMutation({
       const envDevice = findDevice("Environmental Monitoring");
       if (!envDevice) throw new Error("Environmental Monitoring device not found in room");
 
+      // Only CO2 spikes — other readings stay normal. Agent should note that
+      // only 1 reading is out of range (unlike ventilation_failure where 5 spike).
       const spikedFields = {
         ...(envDevice.fields as Record<string, unknown>),
         co2: 1050,
         allWithinRange: false,
         riskLevel: "high",
-        status: "CO2 ELEVATED",
+        status: "THRESHOLD EXCEEDED",
+        outOfRangeFields: [
+          { field: "co2", value: 1050, allowed: { min: 400, max: 800 }, unit: "ppm" },
+        ],
       };
 
       await ctx.db.patch(envDevice._id, {
         status: "error",
-        currentAction: "CO2 SPIKE DETECTED",
+        currentAction: "THRESHOLD EXCEEDED — 1 reading out of allowed range",
         fields: spikedFields,
         updatedAt: now,
       });
