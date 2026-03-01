@@ -32,7 +32,6 @@ export default defineSchema({
     lastError: v.optional(v.string()),
     fields: v.any(),
     fieldSchema: v.optional(v.any()),
-    screenshotId: v.optional(v.id("_storage")),
     updatedAt: v.number(),
   })
     .index("by_room", ["roomId"])
